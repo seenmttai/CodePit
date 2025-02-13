@@ -1,5 +1,83 @@
 import c2wasm from "https://cdn.jsdelivr.net/npm/@ictrobot/c2wasm@0.1.0/+esm";
 
+function extractParamsAndReturns(code, language) {
+  let params = "";
+  let returns = "";
+  let returnCount = 0;
+  let functionName = "";
+  const returnTypes = new Set();
+
+  if (language === "python") {
+    const sigRegex = /def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([^:\n]+))?:/;
+    const match = code.match(sigRegex);
+    if (match) {
+      functionName = match[1];
+      params = match[2].split(",").map(s => s.trim()).filter(Boolean).join(", ");
+      const typeAnno = match[3] ? match[3].trim() : "";
+      if (typeAnno) {
+        if (/Tuple\s*\[.*\]/.test(typeAnno)) {
+          const inner = typeAnno.replace(/Tuple\s*\[|\]/g, "");
+          const types = inner.split(",").map(s => s.trim());
+          types.forEach(t => returnTypes.add(t));
+          returnCount = types.length;
+        } else {
+          returnTypes.add(typeAnno);
+          returnCount = 1;
+        }
+      }
+    }
+    const retRegex = /return\s+(.+)/g;
+    let retMatch;
+    while ((retMatch = retRegex.exec(code)) !== null) {
+      const retVal = retMatch[1].trim();
+      if (retVal.startsWith("(") && retVal.endsWith(")")) {
+        const innerVals = retVal.slice(1, -1).split(",").map(s => s.trim());
+        returnCount = innerVals.length;
+        innerVals.forEach(val => {
+          if (/^\d+$/.test(val)) returnTypes.add("int");
+          else if (/^\d+\.\d+$/.test(val)) returnTypes.add("float");
+          else if (/^['"].*['"]$/.test(val)) returnTypes.add("str");
+          else returnTypes.add("unknown");
+        });
+      } else {
+        returnCount = 1;
+        if (/^\d+$/.test(retVal)) returnTypes.add("int");
+        else if (/^\d+\.\d+$/.test(retVal)) returnTypes.add("float");
+        else if (/^['"].*['"]$/.test(retVal)) returnTypes.add("str");
+        else returnTypes.add("unknown");
+      }
+    }
+  } else if (language === "c") {
+    const sigRegex = /(?:^|\n)\s*([a-zA-Z_][\w\s\*\d]+?)\s+(\w+)\s*\(([^)]*)\)/m;
+    const match = code.match(sigRegex);
+    if (match) {
+      functionName = match[2];
+      params = match[3].split(",").map(p => p.trim()).filter(Boolean).join(", ");
+      let retType = match[1].trim();
+      if(retType.includes("*")){
+        retType = retType.replace(/\*/g, " pointer").trim();
+        returnCount = -1; 
+      } else {
+        returnCount = 1;
+      }
+      returnTypes.add(retType);
+    }
+    const retRegex = /return\s+(.+);/g;
+    let retMatch;
+    while ((retMatch = retRegex.exec(code)) !== null) {
+      const retVal = retMatch[1].trim();
+      if(retVal.startsWith("{") && retVal.endsWith("}")){
+        const innerVals = retVal.slice(1, -1).split(",").map(s => s.trim());
+        returnCount = innerVals.length;
+        innerVals.forEach(val => returnTypes.add("unknown"));
+      }
+    }
+  }
+  
+  returns = returnTypes.size ? Array.from(returnTypes).join(", ") : "Not specified";
+  return { params, returns, returnCount, returnTypes: Array.from(returnTypes), functionName };
+}
+
 const formSection = document.getElementById("formSection");
 const resultSection = document.getElementById("resultSection");
 const problemForm = document.getElementById("problemForm");
@@ -14,225 +92,128 @@ const customCompareGroup = document.getElementById("customCompareGroup");
 const variableNameInput = document.getElementById("variableName");
 const customCompareInput = document.getElementById("customCompare");
 const revealTestBtn = document.getElementById("revealTestBtn");
+const languageSelect = document.getElementById("languageSelect");
+const codeEditor = document.getElementById("codeEditor");
+const insertJSONBtn = document.getElementById("insertJSONBtn");
+const questionJSON = document.getElementById("questionJSON");
 
-comparisonType.addEventListener("change", () => {
-  if (comparisonType.value === "variable") {
-    variableNameGroup.classList.remove("hidden");
-    customCompareGroup.classList.add("hidden");
-  } else if (comparisonType.value === "custom") {
-    customCompareGroup.classList.remove("hidden");
-    variableNameGroup.classList.add("hidden");
-  } else {
-    variableNameGroup.classList.add("hidden");
-    customCompareGroup.classList.add("hidden");
-  }
-});
+const skeletons = {
+  python: `def lengthOfLongestSubstring(s):
+    char_index = {}
+    max_length = 0
+    start = 0
+    for end, char in enumerate(s):
+        if char in char_index and char_index[char] >= start:
+            start = char_index[char] + 1
+        else:
+            max_length = max(max_length, end - start + 1)
+        char_index[char] = end
+    return max_length`,
+  c: `#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-function extractParamsAndReturns(code, language) {
-  let params = "";
-  let returns = "";
-  let returnCount = 0;
-  let returnTypes = new Set();
-
-  if (language === 'python') {
-    const funcMatch = code.match(/def\s+\w+\s*\(([^)]*)\)(?:\s*->\s*([^:\n]+))?:/);
-    if (funcMatch) {
-      params = funcMatch[1].split(',').map(s => s.trim()).filter(Boolean).join(', ');
-      if (funcMatch[2]) {
-        let anno = funcMatch[2].trim();
-        if (anno.startsWith('Tuple[')) {
-          anno = anno.slice(6, -1);
-          anno.split(',').forEach(type => returnTypes.add(type.trim()));
-          returnCount = returnTypes.size;
-        } else {
-          returnTypes.add(anno);
-          returnCount = 1;
-        }
-      }
-    }
-    const returnStatements = code.match(/return\s+([^\n#]+)/g);
-    if (returnStatements) {
-      returnCount = returnStatements.length;
-      returnStatements.forEach(stmt => {
-        const value = stmt.replace(/return\s+/, '').trim();
-        if (/None\b/.test(value)) {
-          returnTypes.add("None");
-        } else if (/(["'])(?:(?=(\\?))\2.)*?\1/.test(value)) {
-          returnTypes.add("str");
-        } else if (/\d+\.\d+/.test(value)) {
-          returnTypes.add("float");
-        } else if (/^\d+$/.test(value)) {
-          returnTypes.add("int");
-        } else if (/^\[.*\]$/.test(value)) {
-          returnTypes.add("list");
-        } else if (/^\{.*\}$/.test(value)) {
-          returnTypes.add("dict");
-        } else {
-          returnTypes.add("unknown");
-        }
-      });
-    }
-  } else if (language === 'c') {
-    const funcMatch = code.match(/([a-zA-Z_][\w\s\*]+)\s+\**\s*\w+\s*\(([^)]*)\)/);
-    if (funcMatch) {
-      let retType = funcMatch[1].trim().replace(/\s+/g, ' ');
-      // Check for pointer indication
-      if(retType.includes("*")) retType = retType.replace("*", " pointer").trim();
-      returnTypes.add(retType);
-      params = funcMatch[2].split(',').map(p => p.trim()).filter(Boolean).join(', ');
-      returnCount = 1;
-    }
-  } else if (language === 'javascript') {
-    let funcMatch = code.match(/function\s+\w+\s*\(([^)]*)\)/);
-    if (funcMatch) {
-      params = funcMatch[1].trim();
-      returnCount = 1;
-    } else {
-      funcMatch = code.match(/\(?([^)]*)\)?\s*=>/);
-      if (funcMatch) {
-        params = funcMatch[1].trim();
-        returnCount = 1;
-      }
-    }
-    const jsDoc = code.match(/\/\*\*[\s\S]*?\*\//);
-    if (jsDoc) {
-      const paramMatches = jsDoc[0].match(/@param\s+{([^}]+)}/g);
-      const returnMatch = jsDoc[0].match(/@returns?\s+{([^}]+)}/);
-      if (paramMatches) {
-        params = paramMatches.map(p => p.match(/@param\s+{([^}]+)}/)[1]).join(', ');
-      }
-      if (returnMatch) {
-        returnTypes.add(returnMatch[1].trim());
-        returnCount = 1;
-      }
-    }
-    const returnStatements = code.match(/return\s+([^;]+)/g);
-    if (returnStatements) {
-      returnCount = returnStatements.length;
-      returnStatements.forEach(stmt => {
-        const value = stmt.replace(/return\s+/, '').trim();
-        if (/null/.test(value)) {
-          returnTypes.add("null");
-        } else if (/(["'])(?:(?=(\\?))\2.)*?\1/.test(value)) {
-          returnTypes.add("string");
-        } else if (/\d+\.\d+/.test(value)) {
-          returnTypes.add("number (float)");
-        } else if (/^\d+$/.test(value)) {
-          returnTypes.add("number (int)");
-        } else if (/^\[.*\]$/.test(value)) {
-          returnTypes.add("Array");
-        } else if (/^\{.*\}$/.test(value)) {
-          returnTypes.add("object");
-        } else {
-          returnTypes.add("unknown");
-        }
-      });
-    }
+int lengthOfLongestSubstring(char* s, int* returnSize) {
+  int n = strlen(s);
+  int max_length = 0;
+  int start = 0;
+  int index[256] = {0};
+  for (int end = 0; end < n; end++) {
+    if(index[(unsigned char)s[end]] > start)
+      start = index[(unsigned char)s[end]];
+    int curr = end - start + 1;
+    if(curr > max_length)
+      max_length = curr;
+    index[(unsigned char)s[end]] = end + 1;
   }
-  if (returnTypes.size === 0) {
-    returns = "Not specified";
-  } else {
-    returns = Array.from(returnTypes).join(", ");
-  }
-  return { params, returns, returnCount };
-}
+  *returnSize = 1;
+  return max_length;
+}`
+};
 
 function populateDefaults() {
-  document.getElementById("title").value = "Two Sum";
-  document.getElementById("summary").value = "Given an array of integers and a target integer, find two numbers in the array that add up to the target.\nUse code with caution.";
+  document.getElementById("title").value = "Longest Substring Without Repeating Characters";
+  document.getElementById("summary").value = "Given a string, find the length of the longest substring without repeating characters.";
   document.getElementById("description").value =
-`You are given an array of integers nums and an integer target. You need to return indices of the two numbers such that they add up to target.
+`Given a string s, find the length of the longest substring without repeating characters.
 
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
+A substring is a contiguous sequence of characters in the string.
 
-You can return the answer in any order.
-Use code with caution.`;
+Call your function with the provided string parameter.`;
   document.getElementById("example").value =
 `Example:
-
-Input: nums = [2,7,11,15], target = 9
-Output: [0,1]
-Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
-
-Input: nums = [3,2,4], target = 6
-Output: [1,2]
-
-Input: nums = [3,3], target = 6
-Output: [0,1]
-Use code with caution.`;
+Input: s = "abcabcbb"
+Output: 3
+Explanation: The longest substring is "abc", with length 3.`;
   document.getElementById("constraints").value =
-`- 2 <= nums.length <= 10^4
-- -10^9 <= nums[i] <= 10^9
-- -10^9 <= target <= 10^9
-- Only one valid answer exists.
-Use code with caution.`;
+`- 0 <= s.length <= 5 * 10^4
+- s consists of English letters, digits, symbols, and spaces`;
   document.getElementById("testcases").value =
 `[
-  {"input": [2,7,11,15], "target": 9, "expected": [0,1]},
-  {"input": [3,2,4], "target": 6, "expected": [1,2]},
-  {"input": [3,3], "target": 6, "expected": [0,1]},
-  {"input": [-1,-3,-8,-9], "target": -10, "expected": [2,3]},
-  {"input": [1,2,3,4,5], "target": 7, "expected": [2,3]}
+  {"params": ["abcabcbb"], "expected": 3},
+  {"params": ["bbbbb"], "expected": 1},
+  {"params": ["pwwkew"], "expected": 3},
+  {"params": [" "], "expected": 1},
+  {"params": [""], "expected": 0}
 ]`;
-  document.getElementById("pythonSkeleton").value =
-`def twoSum(nums, target):
-    # Your code here
-    return []  # Placeholder return - should return a list of indices`;
-  document.getElementById("cSkeleton").value =
-`#include <stdio.h>
-#include <stdlib.h>
-
-/**
- * Note: The returned array must be malloced, assume caller calls free().
- */
-int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
-    // Your code here
-    *returnSize = 0; // Indicate no elements in the returned array initially
-    return NULL;      // Placeholder return - should return malloced array of indices
-}`;
-  document.getElementById("jsSkeleton").value =
-`function twoSum(nums, target) {
-    // Your code here
-    return []; // Placeholder return - should return an array of indices
-}`;
+  codeEditor.value = skeletons[languageSelect.value];
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   populateDefaults();
-  extractBtn.click(); 
+  extractBtn.click();
+});
+
+languageSelect.addEventListener("change", () => {
+  codeEditor.value = skeletons[languageSelect.value];
+});
+
+insertJSONBtn.addEventListener("click", () => {
+  let jsonData;
+  try {
+    jsonData = JSON.parse(questionJSON.value);
+  } catch (e) {
+    alert("Invalid JSON format.");
+    return;
+  }
+  if (jsonData.title) document.getElementById("title").value = jsonData.title;
+  if (jsonData.summary) document.getElementById("summary").value = jsonData.summary;
+  if (jsonData.description) document.getElementById("description").value = jsonData.description;
+  if (jsonData.example) document.getElementById("example").value = jsonData.example;
+  if (jsonData.constraints) document.getElementById("constraints").value = jsonData.constraints;
+  if (jsonData.testcases) document.getElementById("testcases").value = jsonData.testcases;
+  if (jsonData.language) {
+    languageSelect.value = jsonData.language;
+    codeEditor.value = skeletons[jsonData.language] || codeEditor.value;
+  }
+  if (jsonData.code) codeEditor.value = jsonData.code;
 });
 
 extractBtn.addEventListener("click", () => {
-  const pythonCode = document.getElementById("pythonSkeleton").value;
-  const { params, returns } = extractParamsAndReturns(pythonCode, 'python');
+  const lang = languageSelect.value;
+  const code = codeEditor.value;
+  const { params, returns, functionName } = extractParamsAndReturns(code, lang);
   paramExtracted.value = params || "Could not detect parameters";
-  returnExtracted.value = returns || "Could not detect return value";
+  returnExtracted.value = returns || "Could not detect return value(s)";
 });
 
 problemForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  
   const title = document.getElementById("title").value;
   const summary = document.getElementById("summary").value;
   const description = document.getElementById("description").value;
   const example = document.getElementById("example").value;
   const constraints = document.getElementById("constraints").value;
   const testcases = document.getElementById("testcases").value;
-  const pythonSkeleton = document.getElementById("pythonSkeleton").value;
-  const cSkeleton = document.getElementById("cSkeleton").value;
-  const jsSkeleton = document.getElementById("jsSkeleton").value;
+  const userCode = codeEditor.value;
   const paramsExtracted = paramExtracted.value;
   const returnsExtracted = returnExtracted.value;
   const compareType = comparisonType.value;
   const variableName = variableNameInput.value;
   const customCompare = customCompareInput.value;
-  
-  const skeletonCode = {
-    python: pythonSkeleton,
-    c: cSkeleton,
-    javascript: jsSkeleton
-  };
-  
+  const language = languageSelect.value;
+
   generatedContent.innerHTML = `
     <div class="problem-section">
       <h2>${title}</h2>
@@ -245,53 +226,53 @@ problemForm.addEventListener("submit", (e) => {
       <pre>${constraints}</pre>
       <h3>Test Cases</h3>
       <pre>${testcases}</pre>
-      <h3>Smart Extraction</h3>
+      <h3>Extracted Function Signature</h3>
       <p><strong>Parameters:</strong> ${paramsExtracted}</p>
       <p><strong>Return Value(s):</strong> ${returnsExtracted}</p>
-      <h3>Output Comparison Options</h3>
-      <p><strong>Comparison Type:</strong> ${compareType}</p>
-      ${compareType === "variable" ? `<p><strong>Variable:</strong> ${variableName}</p>` : ""}
-      ${compareType === "custom" ? `<p><strong>Custom Function:</strong> ${customCompare}</p>` : ""}
+      <h3>Output Comparison Method:</h3>
+      <p>${compareType}${ (compareType==="variable") ? " | Variable: " + variableName : ""}${ (compareType==="custom") ? " | Custom Function Provided" : ""}</p>
     </div>
     <div class="code-editor-section">
       <div class="language-selector">
-        <select id="languageSelect">
-          <option value="python">Python</option>
-          <option value="c">C</option>
-          <option value="javascript">JavaScript</option>
+        <select id="runLanguageSelect">
+          <option value="python" ${language==="python"?"selected":""}>Python</option>
+          <option value="c" ${language==="c"?"selected":""}>C</option>
         </select>
         <button id="runBtn">Run Code</button>
       </div>
-      <textarea class="code-editor" id="codeEditor" rows="20"></textarea>
+      <textarea class="code-editor" id="runEditor" rows="20">${userCode}</textarea>
       <pre id="output"></pre>
     </div>
   `;
 
   formSection.classList.add("hidden");
   resultSection.classList.remove("hidden");
-  
-  const languageSelect = document.getElementById("languageSelect");
-  const codeEditor = document.getElementById("codeEditor");
-  const runBtn = document.getElementById("runBtn");
 
-  languageSelect.addEventListener("change", () => {
-    codeEditor.value = skeletonCode[languageSelect.value];
+  const runLanguageSelect = document.getElementById("runLanguageSelect");
+  const runEditor = document.getElementById("runEditor");
+  const runBtn = document.getElementById("runBtn");
+  const outputElem = document.getElementById("output");
+
+  runLanguageSelect.addEventListener("change", () => {
+    const lang = runLanguageSelect.value;
+    runEditor.value = skeletons[lang];
   });
 
-  codeEditor.value = skeletonCode.python;
-
   runBtn.addEventListener("click", async () => {
-    const language = languageSelect.value;
-    switch (language) {
-      case "python":
-        await runPython(compareType, variableName, customCompare);
-        break;
-      case "c":
-        await runC(compareType, variableName, customCompare);
-        break;
-      case "javascript":
-        runJS(compareType, variableName, customCompare);
-        break;
+    const lang = runLanguageSelect.value;
+    const code = runEditor.value;
+    let testCases;
+    try {
+      testCases = JSON.parse(document.getElementById("testcases").value);
+    } catch(e) {
+      outputElem.textContent = "Invalid JSON for test cases.";
+      return;
+    }
+    
+    if (lang === "python") {
+      await runPython(code, testCases, compareType, variableName, customCompare);
+    } else if (lang === "c") {
+      await runC(code, testCases, compareType, variableName, customCompare);
     }
   });
 });
@@ -305,31 +286,29 @@ revealTestBtn.addEventListener("click", () => {
   alert(document.getElementById("testcases").value);
 });
 
-
 let pyodide = null;
 async function loadPyodideAndPackages() {
   if (!window.loadPyodide) {
     const pyScript = document.createElement("script");
     pyScript.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
     document.head.appendChild(pyScript);
-    await new Promise(resolve => {
-      pyScript.onload = resolve;
-    });
+    await new Promise(resolve => { pyScript.onload = resolve; });
   }
   if (!pyodide) {
     pyodide = await loadPyodide();
   }
 }
 
-async function runPython(compareType, variableName, customCompare) {
-  const code = document.getElementById("codeEditor").value;
+async function runPython(code, testCases, compareType, variableName, customCompare) {
   const outputElem = document.getElementById("output");
   try {
     if (!pyodide) {
       outputElem.textContent = "Loading Pyodide. Please wait...";
       await loadPyodideAndPackages();
     }
-    const testCases = JSON.parse(document.getElementById("testcases").value);
+    const { functionName } = extractParamsAndReturns(code, "python");
+    if (!functionName) throw new Error("Could not detect function name in code");
+    
     let compareLogic = "";
     if (compareType === "exact") {
       compareLogic = "result == case['expected']";
@@ -338,121 +317,121 @@ async function runPython(compareType, variableName, customCompare) {
     } else if (compareType === "variable") {
       compareLogic = `${variableName} == case['expected']`;
     } else if (compareType === "custom") {
-      compareLogic = `custom_compare(result, case['expected'])`;
+      compareLogic = "custom_compare(result, case['expected'])";
+    } else if (compareType === "multi" || compareType === "object") {
+      compareLogic = "result == case['expected']";
     }
+    
     let customCompareCode = "";
-    if (compareType === "custom" && customCompare.trim()) {
+    if(compareType === "custom" && customCompare.trim()){
       customCompareCode = `\nfrom js import eval as js_eval\ncustom_compare = js_eval("""${customCompare}""")`;
     }
-    const fullCode = `
-${code}
-
+    
+    let fullCode = `${code}
+    
 def run_tests():
-    results = []
-    test_cases = ${JSON.stringify(testCases)}
-    ${compareType === "custom" ? customCompareCode : ""}
-    for case in test_cases:
-        result = twoSum(case["input"], case.get("target", None))
-        results.append(${compareLogic})
-    return results
+  results = []
+  test_cases = ${JSON.stringify(testCases)}
+  ${compareType==="custom"? customCompareCode: ""}
+  for case in test_cases:
+    try:
+      result = ${functionName}(*case["params"])
+      results.append(${compareLogic})
+    except Exception as e:
+      results.append(False)
+  return results
 
-test_results = run_tests()
-print(test_results)
+_test_results = run_tests()
 `;
     await pyodide.runPythonAsync(fullCode);
-    const testResults = await pyodide.globals.get("test_results").toJs();
-    const successRate = testResults.filter(r => r).length;
-    const total = testResults.length;
-    outputElem.textContent = `Python Test Results: ${successRate}/${total} tests passed`;
+    const testResults = await pyodide.globals.get("_test_results").toJs();
+    const passed = testResults.filter(t => t).length;
+    outputElem.textContent = `Python Test Results: ${passed}/${testResults.length} tests passed.`;
   } catch (err) {
     outputElem.textContent = "Error: " + err;
     console.error(err);
   }
 }
 
-async function runC(compareType, variableName, customCompare) {
-  const code = document.getElementById("codeEditor").value;
+async function runC(code, testCases, compareType, variableName, customCompare) {
   const outputElem = document.getElementById("output");
   try {
-    c2wasm.setFlags("default");
-    const testCases = JSON.parse(document.getElementById("testcases").value);
-    const currentCase = JSON.parse(document.getElementById("testcases").value)[0];
-    const inputArray = currentCase.input.join(',');
-    const fullCode = `
-#include <stdio.h>
+    const { functionName } = extractParamsAndReturns(code, "c");
+    const funcName = functionName || "lengthOfLongestSubstring";
+    
+    let fullCode = `#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
 ${code}
 
-bool compare_arrays(int* arr1, int* arr2, int size) {
-  for (int i = 0; i < size; i++) {
-    if (arr1[i] != arr2[i]) return false;
-  }
-  return true;
+bool compare_value(int result, int expected) {
+  return result == expected;
 }
 
 int main() {
-  int test_input[] = {${inputArray}};
-  int target = ${currentCase.target || 0};
-  int expected[2] = {${currentCase.expected.join(',')}};
-  int returnSize = 0;
-  int* result = twoSum(test_input, sizeof(test_input)/sizeof(int), target, &returnSize);
-  bool passed = false;
-  if (returnSize == 2) {
-    passed = compare_arrays(result, expected, returnSize);
+  int passCount = 0;
+  int total = ${testCases.length};
+`;
+    
+    testCases.forEach((tc, index) => {
+      let paramDecls = "";
+      let callArgs = "";
+      tc.params.forEach((param, idx) => {
+        const varName = "param" + idx;
+        if (typeof param === "string") {
+          paramDecls += `  char ${varName}[${param.length + 1}];\n  strcpy(${varName}, "${param}");\n`;
+          callArgs += `${varName}, `;
+        } else {
+          if (Array.isArray(param)) {
+            paramDecls += `  int ${varName}[] = {${param.join(',')}};\n`;
+            paramDecls += `  int ${varName}Size = sizeof(${varName})/sizeof(int);\n`;
+            callArgs += `${varName}, ${varName}Size, `;
+          } else {
+            callArgs += `${param}, `;
+          }
+        }
+      });
+      paramDecls += `  int returnSize = 0;\n`;
+      if(callArgs.endsWith(", ")) callArgs = callArgs.slice(0, -2);
+      
+      fullCode += `
+  {
+${paramDecls}
+  int result = ${funcName}(${callArgs.length ? callArgs + ", " : ""}&returnSize);
+  if(compare_value(result, ${tc.expected})) passCount++;
   }
-  free(result);
-  printf("%d", passed);
+`;
+    });
+    
+    fullCode += `
+  printf("C Test Results: %d/%d tests passed.\\n", passCount, total);
   return 0;
 }
 `;
-    let capturedOutput = "";
-    const compiledModule = await c2wasm.compile(fullCode).execute({
-      c2wasm: {
-        __put_char: (charCode) => {
-          capturedOutput += String.fromCharCode(charCode);
-        },
-        __time: () => performance.now(),
-      }
+    
+    outputElem.textContent = "Compiling...";
+    const response = await fetch('https://c-compile.deno.dev/compile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      body: fullCode
     });
-    if (compiledModule.main) {
-      compiledModule.main();
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
-    let passed = capturedOutput.trim() === "1";
-    outputElem.textContent = "C Test Result: " + (passed ? "Passed" : "Failed");
+
+    const outputText = await response.text();
+    outputElem.textContent = outputText || "Program finished without output.";
+
   } catch (err) {
     outputElem.textContent = "C Error: " + err;
     console.error(err);
   }
 }
 
-function runJS(compareType, variableName, customCompare) {
-  const code = document.getElementById("codeEditor").value;
-  const outputElem = document.getElementById("output");
-  try {
-    const testCases = JSON.parse(document.getElementById("testcases").value);
-    const fn = new Function("return (" + code + ")")();
-    let passedCount = 0;
-    for (const tc of testCases) {
-      const result = fn(tc.input, tc.target);
-      let passed = false;
-      if (compareType === "exact") {
-        passed = JSON.stringify(result) === JSON.stringify(tc.expected);
-      } else if (compareType === "subset") {
-        if (Array.isArray(result) && Array.isArray(tc.expected)) {
-          passed = tc.expected.every(item => result.includes(item));
-        }
-      } else if (compareType === "variable") {
-        passed = result[variableName] === tc.expected;
-      } else if (compareType === "custom" && customCompare.trim()) {
-        const compareFn = eval(customCompare);
-        passed = compareFn(result, tc.expected);
-      }
-      if (passed) passedCount++;
-    }
-    outputElem.textContent = "JavaScript Test Results: " + passedCount + "/" + testCases.length + " tests passed";
-  } catch (err) {
-    outputElem.textContent = "JS Error: " + err;
-    console.error(err);
-  }
-}
+languageSelect.value = "python";

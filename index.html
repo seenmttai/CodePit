@@ -14,165 +14,124 @@
   <main>
     <section id="formSection">
       <form id="problemForm">
-        <div class="form-group">
-          <label for="title">Title</label>
-          <input id="title" name="title" type="text" required value="Two Sum">
-        </div>
-        
-        <div class="form-group">
-          <label for="summary">Summary</label>
-          <textarea id="summary" name="summary" rows="2" required>Given an array of integers and a target integer, find two numbers in the array that add up to the target.
-Use code with caution.</textarea>
-        </div>
+        <div class="split-container">
+          <div class="info-pane">
+            <h2>Problem Details</h2>
+            <div class="form-box">
+              <label for="questionJSON">Insert Question via JSON</label>
+              <textarea id="questionJSON" name="questionJSON" rows="6" placeholder='{"title": "Longest Substring Without Repeating Characters", "summary": "Given a string...", "description": "Given a string s, find the length...", "example": "Example:\nInput: s = \"abcabcbb\"\nOutput: 3", "constraints": "- 0 <= s.length <= 5 * 10^4", "testcases": "[\n  {\"params\": [\"abcabcbb\"], \"expected\": 3},\n  {\"params\": [\"bbbbb\"], \"expected\": 1},\n  {\"params\": [\"pwwkew\"], \"expected\": 3},\n  {\"params\": [\" \"], \"expected\": 1},\n  {\"params\": [\"\"], \"expected\": 0}\n]", "language": "python", "code": "def lengthOfLongestSubstring(s):\n    char_index = {}\n    max_length = 0\n    start = 0\n    for end, char in enumerate(s):\n        if char in char_index and char_index[char] >= start:\n            start = char_index[char] + 1\n        else:\n            max_length = max(max_length, end - start + 1)\n        char_index[char] = end\n    return max_length"}'></textarea>
+              <button type="button" id="insertJSONBtn">Insert via JSON</button>
+            </div>
+            <div class="form-box">
+              <label for="title">Title</label>
+              <input id="title" name="title" type="text" required value="Longest Substring Without Repeating Characters">
+            </div>
+            <div class="form-box">
+              <label for="summary">Summary</label>
+              <textarea id="summary" name="summary" rows="2" required>Given a string, find the length of the longest substring without repeating characters.</textarea>
+            </div>
+            <div class="form-box">
+              <label for="description">Description</label>
+              <textarea id="description" name="description" rows="4" required>
+Given a string s, find the length of the longest substring without repeating characters.
 
-        <div class="form-group">
-          <label for="description">Description</label>
-          <textarea id="description" name="description" rows="4" required>
-You are given an array of integers `nums` and an integer `target`. You need to return indices of the two numbers such that they add up to `target`.
+A substring is a contiguous sequence of characters in the string.
 
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
-
-You can return the answer in any order.
-Use code with caution.</textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="example">Example (Input/Output)</label>
-          <textarea id="example" name="example" rows="4" required>
+Call your function with the provided string parameter.
+              </textarea>
+            </div>
+            <div class="form-box">
+              <label for="example">Example (Input/Output)</label>
+              <textarea id="example" name="example" rows="4" required>
 Example:
-
-Input: nums = [2,7,11,15], target = 9
-Output: [0,1]
-Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
-
-Input: nums = [3,2,4], target = 6
-Output: [1,2]
-
-Input: nums = [3,3], target = 6
-Output: [0,1]
-Use code with caution.</textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="constraints">Constraints</label>
-          <textarea id="constraints" name="constraints" rows="3" required>
-- 2 <= nums.length <= 10^4
-- -10^9 <= nums[i] <= 10^9
-- -10^9 <= target <= 10^9
-- Only one valid answer exists.
-Use code with caution.</textarea>
-        </div>
-
-        <fieldset>
-          <legend>Test Cases (JSON Array)</legend>
-          <div class="form-group">
-            <label for="testcases">Test Cases</label>
-            <textarea id="testcases" name="testcases" rows="4" required>
+Input: s = "abcabcbb"
+Output: 3
+Explanation: The longest substring is "abc", with length 3.
+              </textarea>
+            </div>
+            <div class="form-box">
+              <label for="constraints">Constraints</label>
+              <textarea id="constraints" name="constraints" rows="3" required>
+- 0 <= s.length <= 5 * 10^4
+- s consists of English letters, digits, symbols, and spaces
+              </textarea>
+            </div>
+            <div class="form-box">
+              <label for="testcases">Test Cases (JSON Array)</label>
+              <textarea id="testcases" name="testcases" rows="4" required>
 [
-  {"input": [2,7,11,15], "target": 9, "expected": [0,1]},
-  {"input": [3,2,4], "target": 6, "expected": [1,2]},
-  {"input": [3,3], "target": 6, "expected": [0,1]},
-  {"input": [-1,-3,-8,-9], "target": -10, "expected": [2,3]},
-  {"input": [1,2,3,4,5], "target": 7, "expected": [2,3]}
+  {"params": ["abcabcbb"], "expected": 3},
+  {"params": ["bbbbb"], "expected": 1},
+  {"params": ["pwwkew"], "expected": 3},
+  {"params": [" "], "expected": 1},
+  {"params": [""], "expected": 0}
 ]
-            </textarea>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Solution Template</legend>
-          <div class="form-group">
-            <label for="pythonSkeleton">Python Skeleton Code</label>
-            <div class="editor-container">
-              <textarea id="pythonSkeleton" name="pythonSkeleton" class="code-editor" required>def twoSum(nums, target):
-    # Your code here
-    return []  # Placeholder return - should return a list of indices</textarea>
-              <button type="button" class="copy-button">Copy</button>
+              </textarea>
             </div>
           </div>
-
-          <div class="form-group">
-            <label for="cSkeleton">C Skeleton Code</label>
+          <div class="editor-pane">
+            <h2>Solution Editor</h2>
+            <div class="editor-header">
+              <select id="languageSelect">
+                <option value="python">Python</option>
+                <option value="c">C</option>
+              </select>
+            </div>
             <div class="editor-container">
-              <textarea id="cSkeleton" name="cSkeleton" class="code-editor" required>#include <stdio.h>
-#include <stdlib.h>
-
-/**
- * Note: The returned array must be malloced, assume caller calls free().
- */
-int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
-    // Your code here
-    *returnSize = 0; // Indicate no elements in the returned array initially
-    return NULL;      // Placeholder return - should return malloced array of indices
-}</textarea>
+              <textarea id="codeEditor" class="code-editor" rows="20"></textarea>
               <button type="button" class="copy-button">Copy</button>
             </div>
-          </div>
-
-          <div class="form-group">
-            <label for="jsSkeleton">JavaScript Skeleton Code</label>
-            <div class="editor-container">
-              <textarea id="jsSkeleton" name="jsSkeleton" class="code-editor" required>function twoSum(nums, target) {
-    // Your code here
-    return []; // Placeholder return - should return an array of indices
-}</textarea>
-              <button type="button" class="copy-button">Copy</button>
-            </div>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Smart Extraction</legend>
-          <div class="smart-extract">
-            <div>
-              <div class="form-group">
+            <div class="extraction-controls">
+              <button type="button" id="extractBtn">Extract Function Signature</button>
+              <div class="extract-box">
                 <label for="paramExtracted">Parameters</label>
-                <input id="paramExtracted" name="paramExtracted" type="text" readonly>
+                <input id="paramExtracted" type="text" readonly>
               </div>
-              <div class="form-group">
+              <div class="extract-box">
                 <label for="returnExtracted">Return Value(s)</label>
-                <input id="returnExtracted" name="returnExtracted" type="text" readonly>
+                <input id="returnExtracted" type="text" readonly>
               </div>
             </div>
-            <button type="button" id="extractBtn">Extract from Python</button>
           </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Output Comparison Flexibility</legend>
-          <div class="form-group">
+        </div>
+        <fieldset class="comparison-fieldset">
+          <legend>Output Comparison Options</legend>
+          <div class="form-box">
             <label for="comparisonType">Comparison Type</label>
             <select id="comparisonType" name="comparisonType">
               <option value="exact">Exact Match</option>
-              <option value="subset">Subset Match (each expected element is in output)</option>
-              <option value="variable">Variable-based Comparison (using a specific variable's value)</option>
-              <option value="custom">Custom Comparison (user-provided JS callback)</option>
+              <option value="subset">Subset Match</option>
+              <option value="variable">Variable-based Comparison</option>
+              <option value="custom">Custom Comparison</option>
+              <option value="multi">Multiple Return Values</option>
+              <option value="object">Object/Dictionary Comparison</option>
             </select>
           </div>
-          <div class="form-group hidden" id="variableNameGroup">
+          <div class="form-box hidden" id="variableNameGroup">
             <label for="variableName">Variable Name to Compare</label>
             <input id="variableName" name="variableName" type="text" placeholder="e.g., result">
           </div>
-          <div class="form-group hidden" id="customCompareGroup">
+          <div class="form-box hidden" id="customCompareGroup">
             <label for="customCompare">Custom Comparison Function (JS)</label>
-            <textarea id="customCompare" name="customCompare" rows="3" placeholder="Example: (output, expected) => JSON.stringify(output) === JSON.stringify(expected)"></textarea>
+            <textarea id="customCompare" name="customCompare" rows="3" placeholder="(output, expected) => JSON.stringify(output) === JSON.stringify(expected)"></textarea>
+          </div>
+          <div class="form-box hidden" id="multiReturnGroup">
+            <label for="returnIndices">Return Value Indices to Compare (comma-separated)</label>
+            <input id="returnIndices" name="returnIndices" type="text" placeholder="e.g., 0,1 or leave empty for all">
           </div>
         </fieldset>
-
         <div class="control-buttons">
           <button type="submit">Generate Problem</button>
           <button type="reset">Reset Form</button>
         </div>
       </form>
     </section>
-
     <section id="resultSection" class="hidden">
-      <div id="generatedContent">
-      </div>
-      <div class="control-buttons">
+      <div id="generatedContent" class="generated-content"></div>
+      <div class="nav-buttons">
+        <button id="prevBtn" class="secondary">Previous Question</button>
+        <button id="nextBtn" class="secondary">Next Question</button>
         <button id="editBtn">Edit Problem</button>
-        <button id="prevBtn" class="secondary">Previous</button>
-        <button id="nextBtn" class="secondary">Next</button>
         <button id="revealTestBtn">Reveal Test Cases</button>
       </div>
     </section>
