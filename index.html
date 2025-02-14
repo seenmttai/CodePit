@@ -19,7 +19,16 @@
             <h2>Problem Details</h2>
             <div class="form-box">
               <label for="questionJSON">Insert Question via JSON</label>
-              <textarea id="questionJSON" name="questionJSON" rows="6" placeholder='{"title": "Longest Substring Without Repeating Characters", "summary": "Given a string...", "description": "Given a string s, find the length...", "example": "Example:\nInput: s = \"abcabcbb\"\nOutput: 3", "constraints": "- 0 <= s.length <= 5 * 10^4", "testcases": "[\n  {\"params\": [\"abcabcbb\"], \"expected\": 3},\n  {\"params\": [\"bbbbb\"], \"expected\": 1},\n  {\"params\": [\"pwwkew\"], \"expected\": 3},\n  {\"params\": [\" \"], \"expected\": 1},\n  {\"params\": [\"\"], \"expected\": 0}\n]", "language": "python", "code": "def lengthOfLongestSubstring(s):\n    char_index = {}\n    max_length = 0\n    start = 0\n    for end, char in enumerate(s):\n        if char in char_index and char_index[char] >= start:\n            start = char_index[char] + 1\n        else:\n            max_length = max(max_length, end - start + 1)\n        char_index[char] = end\n    return max_length"}'></textarea>
+              <textarea id="questionJSON" name="questionJSON" rows="8" placeholder='{
+  "title": "Longest Substring Without Repeating Characters",
+  "summary": "Given a string, find the length of the longest substring without repeating characters.",
+  "description": "Given a string s, find the length of the longest substring without repeating characters. A substring is a contiguous sequence of characters in the string. Call your function with the provided string parameter.",
+  "example": "Example:\nInput: s = \"abcabcbb\"\nOutput: 3\nExplanation: The longest substring is \"abc\", with length 3.",
+  "constraints": "- 0 <= s.length <= 5 * 10^4\n- s consists of English letters, digits, symbols, and spaces",
+  "testcases": "[\n  {\"params\": [\"abcabcbb\"], \"expected\": 3},\n  {\"params\": [\"bbbbb\"], \"expected\": 1},\n  {\"params\": [\"pwwkew\"], \"expected\": 3},\n  {\"params\": [\" \"], \"expected\": 1},\n  {\"params\": [\"\"], \"expected\": 0}\n]",
+  "language": "python",
+  "code": "def lengthOfLongestSubstring(s):\n    char_index = {}\n    max_length = 0\n    start = 0\n    for end, char in enumerate(s):\n        if char in char_index and char_index[char] >= start:\n            start = char_index[char] + 1\n        else:\n            max_length = max(max_length, end - start + 1)\n        char_index[char] = end\n    return max_length"
+}'></textarea>
               <button type="button" id="insertJSONBtn">Insert via JSON</button>
             </div>
             <div class="form-box">
@@ -32,48 +41,40 @@
             </div>
             <div class="form-box">
               <label for="description">Description</label>
-              <textarea id="description" name="description" rows="4" required>
-Given a string s, find the length of the longest substring without repeating characters.
+              <textarea id="description" name="description" rows="4" required>Given a string s, find the length of the longest substring without repeating characters.
 
 A substring is a contiguous sequence of characters in the string.
 
-Call your function with the provided string parameter.
-              </textarea>
+Call your function with the provided string parameter.</textarea>
             </div>
             <div class="form-box">
               <label for="example">Example (Input/Output)</label>
-              <textarea id="example" name="example" rows="4" required>
-Example:
+              <textarea id="example" name="example" rows="4" required>Example:
 Input: s = "abcabcbb"
 Output: 3
-Explanation: The longest substring is "abc", with length 3.
-              </textarea>
+Explanation: The longest substring is "abc", with length 3.</textarea>
             </div>
             <div class="form-box">
               <label for="constraints">Constraints</label>
-              <textarea id="constraints" name="constraints" rows="3" required>
-- 0 <= s.length <= 5 * 10^4
-- s consists of English letters, digits, symbols, and spaces
-              </textarea>
+              <textarea id="constraints" name="constraints" rows="3" required>- 0 <= s.length <= 5 * 10^4
+- s consists of English letters, digits, symbols, and spaces</textarea>
             </div>
             <div class="form-box">
               <label for="testcases">Test Cases (JSON Array)</label>
-              <textarea id="testcases" name="testcases" rows="4" required>
-[
+              <textarea id="testcases" name="testcases" rows="4" required>[
   {"params": ["abcabcbb"], "expected": 3},
   {"params": ["bbbbb"], "expected": 1},
   {"params": ["pwwkew"], "expected": 3},
   {"params": [" "], "expected": 1},
   {"params": [""], "expected": 0}
-]
-              </textarea>
+]</textarea>
             </div>
           </div>
           <div class="editor-pane">
             <h2>Solution Editor</h2>
             <div class="editor-header">
               <select id="languageSelect">
-                <option value="python">Python</option>
+                <option value="python" selected>Python</option>
                 <option value="c">C</option>
               </select>
             </div>
@@ -122,9 +123,24 @@ Explanation: The longest substring is "abc", with length 3.
         </fieldset>
         <div class="control-buttons">
           <button type="submit">Generate Problem</button>
-          <button type="reset">Reset Form</button>
+          <button type="reset" id="resetForm">Reset Form</button>
         </div>
       </form>
+      <!-- Advanced Full Template Section -->
+      <section class="advanced-template-section">
+        <div class="advanced-header">
+          <h3>Advanced: Full Execution Template</h3>
+          <span class="sync-status">Template sync active</span>
+        </div>
+        <div class="advanced-content">
+          <textarea id="fullTemplateEditor" class="template-editor"></textarea>
+          <div class="template-controls">
+            <button type="button" id="restoreTemplate">Restore Default Template</button>
+            <button type="button" id="updateTemplate">Update Template</button>
+          </div>
+          <p class="template-note">The code below shows the exact code that will be executed (with the competitor's solution replaced by the marker: /* USER SOLUTION HERE */).</p>
+        </div>
+      </section>
     </section>
     <section id="resultSection" class="hidden">
       <div id="generatedContent" class="generated-content"></div>

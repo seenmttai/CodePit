@@ -180,6 +180,74 @@ button:active {
   color: var(--primary);
 }
 
+.advanced-template-section {
+  margin-top: 2rem;
+  background: var(--card-bg);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.advanced-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--bg);
+}
+
+.advanced-header:hover {
+  background: var(--border);
+}
+
+.advanced-content {
+  margin-top: 1rem;
+  display: none;
+}
+
+.advanced-content.expanded {
+  display: block;
+}
+
+.template-controls {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.template-editor {
+  font-family: 'JetBrains Mono', monospace;
+  width: 100%;
+  min-height: 250px;
+  background: var(--code-bg);
+  color: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  resize: vertical;
+}
+
+.template-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.sync-status {
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.sync-active {
+  color: var(--success);
+}
+
+.sync-disabled {
+  color: var(--error);
+}
+
 @media(min-width: 768px) {
   .generated-content {
     grid-template-columns: 1fr 1fr;
