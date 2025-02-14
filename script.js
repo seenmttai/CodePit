@@ -10,11 +10,13 @@ const skeletons = {
             max_length = max(max_length, end - start + 1)
         char_index[char] = end
     return max_length`,
-  c: `int lengthOfLongestSubstring(char* s, int* returnSize) {
+  c: `int lengthOfLongestSubstring(char* s) {
+  int n = strlen(s);
   int char_set[256] = {0};
   int max_length = 0;
   int start = 0;
-  for (int end = 0; end < strlen(s); end++) {
+  
+  for (int end = 0; end < n; end++) {
     char current_char = s[end];
     if (char_set[(unsigned char)current_char]) {
       start = (start > char_set[(unsigned char)current_char]) ? start : char_set[(unsigned char)current_char];
@@ -22,18 +24,15 @@ const skeletons = {
     char_set[(unsigned char)current_char] = end + 1;
     max_length = (max_length > (end - start + 1)) ? max_length : (end - start + 1);
   }
-  *returnSize = 1;
   return max_length;
 }`
 };
-
-let pyodide = null;
 
 const DEFAULT_TEMPLATES = {
   python: `
 # Python Test Harness for Longest Substring Without Repeating Characters
 
-# User Solution:
+# Function definition for <<FUNCTION_NAME>>
 /* USER SOLUTION HERE */
 
 def run_tests():
@@ -41,7 +40,7 @@ def run_tests():
   results = []
   for case in test_cases:
     try:
-      result = lengthOfLongestSubstring(*case["params"])
+      result = <<FUNCTION_NAME>>(*case["params"])
       results.append(result == case["expected"])
     except Exception as e:
       print("Error on test case", case, ":", str(e))
@@ -56,6 +55,7 @@ _test_results = run_tests()
 #include <stdlib.h>
 #include <stdbool.h>
 
+/* Function definition for user solution */
 /* USER SOLUTION HERE */
 
 bool compare_value(int result, int expected) {
@@ -64,90 +64,17 @@ bool compare_value(int result, int expected) {
 
 int main() {
   int passCount = 0;
-  int total = 5; 
-  int returnSize;
-
-  // Test case 1
-  char param0_1[256];
-  strcpy(param0_1, "abcabcbb");
-  returnSize = 0;
-  int result_1 = lengthOfLongestSubstring(param0_1, &returnSize); 
-  if(compare_value(result_1, 3)) passCount++;
-
-  // Test case 2  
-  char param0_2[256];
-  strcpy(param0_2, "bbbbb");
-  returnSize = 0;
-  int result_2 = lengthOfLongestSubstring(param0_2, &returnSize); 
-  if(compare_value(result_2, 1)) passCount++;
-
-  // Test case 3
-  char param0_3[256];
-  strcpy(param0_3, "pwwkew");
-  returnSize = 0;
-  int result_3 = lengthOfLongestSubstring(param0_3, &returnSize); 
-  if(compare_value(result_3, 3)) passCount++;
-
-  // Test case 4
-  char param0_4[256];
-  strcpy(param0_4, " ");
-  returnSize = 0;
-  int result_4 = lengthOfLongestSubstring(param0_4, &returnSize); 
-  if(compare_value(result_4, 1)) passCount++;
-
-  // Test case 5
-  char param0_5[256];
-  strcpy(param0_5, "");
-  returnSize = 0;
-  int result_5 = lengthOfLongestSubstring(param0_5, &returnSize); 
-  if(compare_value(result_5, 0)) passCount++;
-
+  int total = <<TEST_COUNT>>;
+  
+  <<TEST_CASES>>
+  
   printf("C Test Results: %d/%d tests passed.\\n", passCount, total);
-  return 0;
+  return passCount == total ? 0 : 1;
 }
-`};
+`
+};
 
-function extractParamsAndReturns(code, language) {
-  let params = "";
-  let returns = "";
-  let functionName = "";
-  const returnTypes = new Set();
-
-  if (language === "python") {
-    const sigRegex = /def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([^:\n]+))?:/;
-    const match = code.match(sigRegex);
-    if (match) {
-      functionName = match[1];
-      params = match[2].split(",").map(s => s.trim()).filter(Boolean).join(", ");
-      if(match[3]){
-        returnTypes.add(match[3].trim());
-      }
-    }
-    const retRegex = /return\s+(.+)/g;
-    let retMatch;
-    while ((retMatch = retRegex.exec(code)) !== null) {
-      const retVal = retMatch[1].trim();
-      if (/^\d+$/.test(retVal)) returnTypes.add("int");
-      else if (/^\d+\.\d+$/.test(retVal)) returnTypes.add("float");
-      else if (/^['"].*['"]$/.test(retVal)) returnTypes.add("str");
-      else returnTypes.add("unknown");
-    }
-  } else if (language === "c") {
-    const sigRegex = /(?:^|\n)\s*([a-zA-Z_][\w\s\*\d]+?)\s+(\w+)\s*\(([^)]*)\)\s*\{/m;
-    const match = code.match(sigRegex);
-    if (match) {
-      functionName = match[2];
-      params = match[3].split(",").map(p => p.trim()).filter(Boolean).join(", ");
-      let retType = match[1].trim();
-      if(retType.includes("*")){
-        retType = retType.replace(/\*/g, " pointer").trim();
-      }
-      returnTypes.add(retType);
-    }
-  }
-  returns = returnTypes.size ? Array.from(returnTypes).join(", ") : "Not specified";
-  return { params, returns, functionName };
-}
+let pyodide = null;
 
 const formSection = document.getElementById("formSection");
 const resultSection = document.getElementById("resultSection");
@@ -184,10 +111,8 @@ advancedHeader.addEventListener("click", () => {
   advancedContent.classList.toggle("expanded");
 });
 
-function updateFullTemplate() {
-  const lang = languageSelect.value;
-  if(templateModified[lang]) return; 
-  
+function updateFullTemplate(lang = languageSelect.value) {
+  let template = DEFAULT_TEMPLATES[lang];
   const testCasesText = document.getElementById("testcases").value;
   let testCases;
   try {
@@ -196,72 +121,46 @@ function updateFullTemplate() {
     testCases = [];
   }
 
-  const userSolution = codeEditor.value;
-  const { functionName } = extractParamsAndReturns(userSolution, lang);
-  
-  let template = '';
-  
-  if(lang === "python") {
-    template = `
-# Python Test Harness
+  const { functionName } = extractParamsAndReturns(codeEditor.value, lang);
+  template = template.replace(/<<FUNCTION_NAME>>/g, functionName || "function");
 
-# User Solution:
-/* USER SOLUTION HERE */
-
-def run_tests():
-  test_cases = ${JSON.stringify(testCases, null, 2)}
-  results = []
-  for case in test_cases:
-    try:
-      result = ${functionName}(*case["params"])
-      results.append(result == case["expected"])
-    except Exception as e:
-      print("Error on test case", case, ":", str(e))
-      results.append(False)
-  return results
-
-_test_results = run_tests()
-`;
-  } else if(lang === "c") {
-    template = `#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-
-/* USER SOLUTION HERE */
-
-bool compare_value(int result, int expected) {
-  return result == expected;
-}
-
-int main() {
-  int passCount = 0;
-  int total = ${testCases.length}; 
-  int returnSize;
-
-  ${testCases.map((tc, idx) => {
-    const paramName = `param0_${idx + 1}`;
-    const resultName = `result_${idx + 1}`;
-    return `
+  if (lang === "python") {
+    template = template.replace("<<TEST_CASES>>", JSON.stringify(testCases, null, 2));
+  } else if (lang === "c") {
+    let testCaseCode = '';
+    testCases.forEach((tc, idx) => {
+      const paramName = `test_input_${idx + 1}`;
+      testCaseCode += `
   // Test case ${idx + 1}
   char ${paramName}[256];
   strcpy(${paramName}, "${tc.params[0]}");
-  returnSize = 0;
-  int ${resultName} = ${functionName}(${paramName}, &returnSize); 
-  if(compare_value(${resultName}, ${tc.expected})) passCount++;
+  int result_${idx+1} = lengthOfLongestSubstring(${paramName}); 
+  if(compare_value(result_${idx+1}, ${tc.expected})) passCount++;
 `;
-  }).join('')}
-
-  printf("C Test Results: %d/%d tests passed.\\n", passCount, total);
-  return 0;
-}`;
+    });
+    template = template.replace("<<TEST_COUNT>>", testCases.length);
+    template = template.replace("<<TEST_CASES>>", testCaseCode);
   }
-  
   fullTemplateEditor.value = template;
+  
+  templateModified[lang] = false;
+  updateSyncStatus(lang);
+}
+
+function updateSyncStatus(lang) {
+  const syncStatusElem = document.querySelector(".sync-status");
+  if (templateModified[lang]) {
+    syncStatusElem.textContent = "Template sync disabled (modified)";
+    syncStatusElem.classList.add("sync-disabled");
+    syncStatusElem.classList.remove("sync-active");
+  } else {
+    syncStatusElem.textContent = "Template sync active";
+    syncStatusElem.classList.add("sync-active");
+    syncStatusElem.classList.remove("sync-disabled");
+  }
 }
 
 questionJSON.addEventListener("input", () => {
-  // Live preview behavior if needed in the future
 });
 
 insertJSONBtn.addEventListener("click", () => {
@@ -305,33 +204,29 @@ comparisonType.addEventListener("change", () => {
   updateFullTemplate();
 });
 
-codeEditor.addEventListener("input", updateFullTemplate);
+codeEditor.addEventListener("input", () => {
+  updateFullTemplate();
+});
 document.getElementById("testcases").addEventListener("input", updateFullTemplate);
 comparisonType.addEventListener("input", updateFullTemplate);
 
 fullTemplateEditor.addEventListener("input", () => {
   const lang = languageSelect.value;
   templateModified[lang] = true;
-  document.querySelector(".sync-status").textContent = "Template sync disabled (modified)";
-  document.querySelector(".sync-status").classList.add("sync-disabled");
-  document.querySelector(".sync-status").classList.remove("sync-active");
+  updateSyncStatus(lang);
 });
 
 restoreTemplateBtn.addEventListener("click", () => {
   const lang = languageSelect.value;
   templateModified[lang] = false;
-  document.querySelector(".sync-status").textContent = "Template sync active";
-  document.querySelector(".sync-status").classList.add("sync-active");
-  document.querySelector(".sync-status").classList.remove("sync-disabled");
+  updateSyncStatus(lang);
   updateFullTemplate();
 });
 
 updateTemplateBtn.addEventListener("click", () => {
   const lang = languageSelect.value;
   templateModified[lang] = true;
-  document.querySelector(".sync-status").textContent = "Template sync disabled (modified)";
-  document.querySelector(".sync-status").classList.add("sync-disabled");
-  document.querySelector(".sync-status").classList.remove("sync-active");
+  updateSyncStatus(lang);
 });
 
 extractBtn.addEventListener("click", () => {
@@ -401,42 +296,14 @@ problemForm.addEventListener("submit", (e) => {
 
   runBtn.addEventListener("click", async () => {
     const runLang = runLanguageSelect.value;
-    const userCodeRun = runEditor.value;
-    let testCases;
-    try {
-      testCases = JSON.parse(document.getElementById("testcases").value);
-    } catch(e) {
-      outputElem.textContent = "Invalid JSON for test cases.";
-      return;
-    }
-    let fullCode;
-    if(runLang === languageSelect.value && !templateModified[runLang]) {
-      fullCode = fullTemplateEditor.value;
-    } else {
-      fullCode = DEFAULT_TEMPLATES[runLang];
-      if(runLang === "python") {
-        fullCode = fullCode.replace("<<TEST_CASES>>", JSON.stringify(testCases, null, 2));
-      } else if(runLang === "c") {
-        let testCaseCode = '';
-        testCases.forEach((tc, idx) => {
-          testCaseCode += `
-    // Test case ${idx + 1}
-    char param0_${idx+1}[256];
-    strcpy(param0_${idx+1}, "${tc.params[0]}");
-    int result_${idx+1} = lengthOfLongestSubstring(param0_${idx+1}, &returnSize); 
-    if(compare_value(result_${idx+1}, ${tc.expected})) passCount++;
-          `;
-        });
-        fullCode = fullCode
-          .replace("<<TEST_COUNT>>", testCases.length)
-          .replace("<<TEST_CASES>>", testCaseCode);
-      }
-    }
-    fullCode = fullCode.split("/* USER SOLUTION HERE */").join(userCodeRun);
-    
-    if(runLang === "python") {
+    updateFullTemplate(runLang);
+  
+    let fullCode = fullTemplateEditor.value;
+    fullCode = fullCode.split("/* USER SOLUTION HERE */").join(runEditor.value);
+
+    if (runLang === "python") {
       await runPython(fullCode);
-    } else if(runLang === "c") {
+    } else if (runLang === "c") {
       await runC(fullCode);
     }
   });
@@ -470,10 +337,6 @@ async function runPython(fullCode) {
       outputElem.textContent = "Loading Pyodide. Please wait...";
       await loadPyodideAndPackages();
     }
-    
-    const userCode = codeEditor.value;
-    const { functionName } = extractParamsAndReturns(userCode, 'python');
-    
     await pyodide.runPythonAsync(fullCode);
     const testResults = await pyodide.globals.get("_test_results").toJs();
     const passed = testResults.filter(t => t).length;
@@ -488,16 +351,10 @@ async function runC(fullCode) {
   const outputElem = document.getElementById('output');
   try {
     outputElem.textContent = "Compiling...";
-    
-    const userCode = codeEditor.value;
-    const { functionName } = extractParamsAndReturns(userCode, 'c');
-    
-    const fullCodeWithName = fullCode.replace(/lengthOfLongestSubstring/g, functionName);
-    
     const response = await fetch('https://c-compile.deno.dev/compile', {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: fullCodeWithName
+      body: fullCode
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -544,6 +401,41 @@ Explanation: The longest substring is "abc", with length 3.`;
   updateFullTemplate();
 }
 
-codeEditor.addEventListener("input", () => {
-  updateFullTemplate();
-});
+function extractParamsAndReturns(code, language) {
+  let params = "";
+  let returns = "";
+  let functionName = "";
+  const returnTypes = new Set();
+
+  if (language === "python") {
+    const sigRegex = /def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([^:\n]+))?:/;
+    const match = code.match(sigRegex);
+    if (match) {
+      functionName = match[1];
+      params = match[2].split(",").map(s => s.trim()).filter(Boolean).join(", ");
+      if(match[3]){
+        returnTypes.add(match[3].trim());
+      }
+    }
+    const retRegex = /return\s+(.+)/g;
+    let retMatch;
+    while ((retMatch = retRegex.exec(code)) !== null) {
+      const retVal = retMatch[1].trim();
+      if (/^\d+$/.test(retVal)) returnTypes.add("int");
+      else if (/^\d+\.\d+$/.test(retVal)) returnTypes.add("float");
+      else if (/^['"].*['"]$/.test(retVal)) returnTypes.add("str");
+      else returnTypes.add("unknown");
+    }
+  } else if (language === "c") {
+    const sigRegex = /(?:^|\n)\s*([a-zA-Z_][\w\s*\d]+?)\s+(\w+)\s*\(([^)]*)\)\s*\{/m;
+    const match = code.match(sigRegex);
+    if (match) {
+      functionName = match[2];
+      params = match[3].split(",").map(p => p.trim()).filter(Boolean).join(", ");
+      let retType = match[1].trim().replace(/\s*\*/, "").trim();
+      returnTypes.add(retType);
+    }
+  }
+  returns = returnTypes.size ? Array.from(returnTypes).join(", ") : "Not specified";
+  return { params, returns, functionName };
+}
