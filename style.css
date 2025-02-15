@@ -159,6 +159,24 @@ button:active {
   transform: translateY(0);
 }
 
+#saveQuestion {
+  background-color: var(--success);
+}
+
+#saveQuestion:hover {
+  background-color: #16a34a;
+}
+
+select:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+option:disabled {
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .hidden {
   display: none;
 }
@@ -176,7 +194,7 @@ button:active {
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
 }
 
-.problem-section h2, .code-editor-section h2 {
+问题-section h2, .code-editor-section h2 {
   color: var(--primary);
 }
 
