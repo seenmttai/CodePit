@@ -25,7 +25,6 @@ _test_results = run_tests()
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
 /* Function definition for <<FUNCTION_NAME>> */
 /* USER SOLUTION HERE */
 bool compare_value(int result, int expected) {
@@ -35,7 +34,7 @@ int main() {
   int passCount = 0;
   int total = <<TEST_COUNT>>;
   <<TEST_CASES>>
-  printf("C Test Results: %d/%d tests passed.\n", passCount, total);
+  printf("C Test Results: %d/%d tests passed.\\n", passCount, total);
   return passCount >= (total+1)/2 ? 0 : 1;
 }
 `
@@ -116,7 +115,7 @@ async function loadQuestionTypes() {
 }
 
 async function loadQuestionData() {
-  const qtVal = document.getElementById("questionType").value; 
+  const qtVal = document.getElementById("questionType").value; // format: "easy-1"
   const [diff, indexStr] = qtVal.split("-");
   const index = parseInt(indexStr);
   const { data, error } = await supabaseClient
@@ -205,7 +204,12 @@ function updateFullTemplate(lang = document.getElementById("languageSelect").val
 function initEventListeners() {
   document.getElementById("languageSelect").addEventListener("change", () => {
     const lang = document.getElementById("languageSelect").value;
-    document.getElementById("codeEditor").value = lang === "python" ? skeletons.python : skeletons.c;
+    const currentCode = document.getElementById("codeEditor").value;
+    if(lang === "python") {
+      document.getElementById("codeEditor").value = skeletons.python;
+    } else {
+      document.getElementById("codeEditor").value = skeletons.c;
+    }
     updateFullTemplate();
   });
 
@@ -227,7 +231,7 @@ function initEventListeners() {
       document.getElementById("example").value = jsonData.example || "";
       document.getElementById("constraints").value = jsonData.constraints || "";
       if(typeof jsonData.testcases === "string") {
-        JSON.parse(jsonData.testcases);
+        JSON.parse(jsonData.testcases); // validate
         document.getElementById("testcases").value = jsonData.testcases;
       } else if(Array.isArray(jsonData.testcases)) {
         document.getElementById("testcases").value = JSON.stringify(jsonData.testcases, null, 2);
@@ -294,14 +298,16 @@ function initEventListeners() {
 }
 
 async function saveQuestion() {
-  const qtVal = document.getElementById("questionType").value;
+  const qtVal = document.getElementById("questionType").value; // e.g., "easy-2"
   const [diff, indexStr] = qtVal.split("-");
   const index = parseInt(indexStr);
   const limits = { easy: 8, medium: 4, hard: 2 };
+  
   const { data, error } = await supabaseClient
     .from('Questions')
-    .select('Type')
+    .select('*')
     .eq('Type', diff.toUpperCase());
+    
   if(error) {
     alert("Error checking question count: " + error.message);
     return;
@@ -326,18 +332,30 @@ async function saveQuestion() {
     Full_Template_C: DEFAULT_TEMPLATES.c
   };
   
-  const { error: saveError } = await supabaseClient
-    .from('Questions')
-    .upsert(questionData, { onConflict: 'Type' });
-  
-  if(saveError) {
-    alert("Error saving question: " + saveError.message);
-    return;
+  if(data && data.length >= index) {
+    const existing = data[index - 1];
+    const { error: updateError } = await supabaseClient
+      .from('Questions')
+      .update(questionData)
+      .eq('id', existing.id);
+    if(updateError) {
+      alert("Error updating question: " + updateError.message);
+      return;
+    }
+    alert("Question updated successfully!");
+  } else {
+    const { error: insertError } = await supabaseClient
+      .from('Questions')
+      .insert(questionData);
+    if(insertError) {
+      alert("Error inserting question: " + insertError.message);
+      return;
+    }
+    alert("Question inserted successfully!");
   }
-  alert("Question saved successfully!");
   loadQuestionTypes(); 
 }
-  
+
 async function loadPyodideAndPackages() {
   if(!window.loadPyodide) {
     const pyScript = document.createElement("script");
@@ -348,4 +366,67 @@ async function loadPyodideAndPackages() {
   if(!pyodide) {
     pyodide = await loadPyodide();
   }
+}
+
+async function saveQuestion() {
+  const questionType = document.getElementById('questionType').value;
+  const [type, indexStr] = questionType.split('-');
+  const index = parseInt(indexStr);
+  const limits = { easy: 8, medium: 4, hard: 2 };
+
+  const { data: existingData, error: fetchError } = await supabaseClient
+    .from('Questions')
+    .select('*')
+    .eq('Type', type.toUpperCase());
+
+  if (fetchError) {
+    console.error('Error checking existing question:', fetchError);
+    alert('Error saving question: ' + fetchError.message);
+    return;
+  }
+
+  if(existingData.length >= limits[type] && index > existingData.length) {
+    alert(`Cannot create more than ${limits[type]} ${type} questions.`);
+    return;
+  }
+
+  const questionData = {
+    Type: type.toUpperCase(),
+    Title: document.getElementById('title').value,
+    Summary: document.getElementById('summary').value,
+    Description: document.getElementById('description').value,
+    Example: document.getElementById('example').value,
+    Constraints: document.getElementById('constraints').value,
+    Test_Cases: document.getElementById('testcases').value,
+    Comparison_Type: document.getElementById('comparisonType').value,
+    Skeleton_Python: skeletons.python,
+    Skeleton_C: skeletons.c,
+    Full_Template_Python: DEFAULT_TEMPLATES.python,
+    Full_Template_C: DEFAULT_TEMPLATES.c
+  };
+
+  if (existingData && existingData.length >= index) {
+    const existingQuestion = existingData[index - 1];
+    const { error } = await supabaseClient
+      .from('Questions')
+      .update(questionData)
+      .eq('id', existingQuestion.id);
+    if(error) {
+      console.error('Detailed error:', error);
+      alert('Error updating question: ' + error.message);
+      return;
+    }
+  } else {
+    const { error } = await supabaseClient
+      .from('Questions')
+      .insert(questionData);
+    if(error) {
+      console.error('Detailed error:', error);
+      alert('Error inserting question: ' + error.message);
+      return;
+    }
+  }
+
+  alert('Question saved successfully!');
+  loadQuestionTypes(); 
 }
