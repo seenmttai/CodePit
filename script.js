@@ -89,7 +89,7 @@ function populateDefaults() {
 }
 
 async function loadQuestionTypes() {
-  const { data, error } = await supabaseClient.from('Questions').select('Type');
+  const { data, error } = await supabaseClient.from('Questions').select('*');
   if (error) {
     console.error('Error fetching question types:', error);
     return;
@@ -98,7 +98,7 @@ async function loadQuestionTypes() {
   let counts = { easy: 0, medium: 0, hard: 0 };
   data.forEach(q => {
     const dt = q.Type.toLowerCase();
-    if(dt in counts) counts[dt]++;
+    if (dt in counts) counts[dt]++;
   });
   const qtSelect = document.getElementById("questionType");
   qtSelect.innerHTML = "";
@@ -114,15 +114,16 @@ async function loadQuestionTypes() {
   updateDifficultyFromType();
 }
 
+
 async function loadQuestionData() {
-  const qtVal = document.getElementById("questionType").value; // format: "easy-1"
+  const qtVal = document.getElementById("questionType").value;
   const [diff, indexStr] = qtVal.split("-");
   const index = parseInt(indexStr);
   const { data, error } = await supabaseClient
     .from('Questions')
     .select('*')
     .eq('Type', diff.toUpperCase())
-    .order('Title', { ascending: true }); 
+    .order('Title', { ascending: true });
   if(error) {
     console.error('Error loading question:', error);
     return;
@@ -138,7 +139,7 @@ async function loadQuestionData() {
     document.getElementById("comparisonType").value = q.Comparison_Type || "exact";
     skeletons.python = q.Skeleton_Python || skeletons.python;
     skeletons.c = q.Skeleton_C || skeletons.c;
-    document.getElementById("fullTemplateEditor").value = 
+    document.getElementById("fullTemplateEditor").value =
       diff.toLowerCase() === "easy" ? (q.Full_Template_Python || DEFAULT_TEMPLATES.python) : (q.Full_Template_C || DEFAULT_TEMPLATES.c);
     const lang = document.getElementById("languageSelect").value;
     document.getElementById("codeEditor").value = lang === "python" ? skeletons.python : skeletons.c;
@@ -161,7 +162,8 @@ function updateDifficultyFromType() {
 }
 
 function updateFullTemplate(lang = document.getElementById("languageSelect").value) {
-  let template = DEFAULT_TEMPLATES[lang];
+  const defaultTemplate = DEFAULT_TEMPLATES[lang] || "";
+  let template = defaultTemplate;
   const testCasesText = document.getElementById("testcases").value;
   let testCases;
   try {
@@ -204,16 +206,16 @@ function updateFullTemplate(lang = document.getElementById("languageSelect").val
 function initEventListeners() {
   document.getElementById("languageSelect").addEventListener("change", () => {
     const lang = document.getElementById("languageSelect").value;
-    const currentCode = document.getElementById("codeEditor").value;
-    if(lang === "python") {
-      document.getElementById("codeEditor").value = skeletons.python;
-    } else {
-      document.getElementById("codeEditor").value = skeletons.c;
-    }
+    document.getElementById("codeEditor").value = skeletons[lang];
     updateFullTemplate();
   });
-
-  document.getElementById("codeEditor").addEventListener("input", updateFullTemplate);
+  
+  document.getElementById("codeEditor").addEventListener("input", () => {
+    const lang = document.getElementById("languageSelect").value;
+    skeletons[lang] = document.getElementById("codeEditor").value;
+    updateFullTemplate();
+  });
+  
   document.getElementById("testcases").addEventListener("input", updateFullTemplate);
   
   document.getElementById("insertJSONBtn").addEventListener("click", () => {
@@ -231,7 +233,7 @@ function initEventListeners() {
       document.getElementById("example").value = jsonData.example || "";
       document.getElementById("constraints").value = jsonData.constraints || "";
       if(typeof jsonData.testcases === "string") {
-        JSON.parse(jsonData.testcases); // validate
+        JSON.parse(jsonData.testcases);
         document.getElementById("testcases").value = jsonData.testcases;
       } else if(Array.isArray(jsonData.testcases)) {
         document.getElementById("testcases").value = JSON.stringify(jsonData.testcases, null, 2);
@@ -298,7 +300,7 @@ function initEventListeners() {
 }
 
 async function saveQuestion() {
-  const qtVal = document.getElementById("questionType").value; // e.g., "easy-2"
+  const qtVal = document.getElementById("questionType").value;
   const [diff, indexStr] = qtVal.split("-");
   const index = parseInt(indexStr);
   const limits = { easy: 8, medium: 4, hard: 2 };
@@ -353,7 +355,7 @@ async function saveQuestion() {
     }
     alert("Question inserted successfully!");
   }
-  loadQuestionTypes(); 
+  loadQuestionTypes();
 }
 
 async function loadPyodideAndPackages() {
@@ -367,4 +369,3 @@ async function loadPyodideAndPackages() {
     pyodide = await loadPyodide();
   }
 }
-

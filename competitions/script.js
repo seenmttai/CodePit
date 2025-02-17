@@ -1,9 +1,371 @@
 const SUPABASE_URL = 'https://vekkziumelqjndunkpxj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZla2t6aXVtZWxxam5kdW5rcHhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk2MTE3MzgsImV4cCI6MjA1NTE4NzczOH0.XWPYixmR7C_TOLh0Ai7HFmGU07Sa2ryZxeEqrd4zwGg';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentRound = "easy"; 
+let rounds = { easy: { limit: 8 }, medium: { limit: 4 }, hard: { limit: 2 } };
+let examQuestions = { easy: [], medium: [], hard: [] };
+let currentQuestionIndex = 0;
+let monacoEditor = null;
+let pyodide = null;
+let warningCount = 0;
+let lastActiveTime = Date.now();
 
-const DEFAULT_TEMPLATES = {
-  python: `
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const teamName = document.getElementById('teamName').value;
+  const password = document.getElementById('password').value;
+  if (!teamName || !password) {
+    showError('Please enter both team name and password');
+    return;
+  }
+  try {
+    const { data, error } = await supabaseClient.rpc('verify_user', {
+      input_username: teamName,
+      input_password: password
+    });
+    if (error) throw error;
+    if (data) {
+      const competitionReady = await checkCompetitionStatus();
+      if (competitionReady) {
+        const { data: existingTeam, error: teamError } = await supabaseClient
+          .from('competitions')
+          .select('*')
+          .eq('username', teamName)
+          .single();
+
+        if (teamError && teamError.code !== 'PGRST116') {
+          throw teamError;
+        }
+
+        if (existingTeam) {
+          const { error: deleteError } = await supabaseClient
+            .from('competitions')
+            .delete()
+            .eq('username', teamName);
+          if (deleteError) throw deleteError;
+        }
+        const { error: insertError } = await supabaseClient
+          .from('competitions')
+          .insert([{ username: teamName, points: 0 }]);
+        if (insertError) throw insertError;
+
+        sessionStorage.setItem('teamName', teamName);
+        sessionStorage.setItem('userId', data);
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('rulesScreen').style.display = 'flex';
+      }
+    } else {
+      showError('Invalid team name or password');
+    }
+  } catch (err) {
+    showError('Login failed: ' + err.message);
+  }
+});
+
+async function checkCompetitionStatus() {
+  try {
+    const { data, error } = await supabaseClient.from('Questions').select('*').limit(1);
+    if (error || !data || data.length === 0) {
+      showWarningModal('Competition has not started yet. Please wait for the organizers.');
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Competition status check failed:', err);
+    return false;
+  }
+}
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+  const { data, error } = await supabaseClient.from('Questions').select('*');
+  if (error || !data || data.length === 0) {
+    showWarningModal('Competition has not started yet. Please wait for the organizers.');
+    return;
+  }
+  await loadExamQuestions();
+  renderRoundInfo();
+  renderQuestionList();
+  currentQuestionIndex = 0;
+  loadQuestion(currentRound, currentQuestionIndex);
+  initializeMonacoEditor();
+  document.getElementById('rulesScreen').style.display = 'none';
+  document.getElementById('competitionScreen').style.display = 'block';
+  
+  document.getElementById('leaderboardBtn').style.display = 'block';
+  
+  setTimeout(() => {
+    const firstQuestion = examQuestions[currentRound][currentQuestionIndex];
+    const lang = document.getElementById('runLanguageSelect').value;
+    if (monacoEditor && firstQuestion) {
+      monacoEditor.setValue(lang === 'python' ? firstQuestion.Skeleton_Python : firstQuestion.Skeleton_C);
+    }
+  }, 500);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    const timeDiff = Date.now() - lastActiveTime;
+    if (timeDiff > 1000) {
+      handleTabSwitch();
+    }
+  }
+  lastActiveTime = Date.now();
+});
+
+async function handleTabSwitch() {
+  warningCount++;
+  if (warningCount === 1) {
+    showWarningModal('First warning: Tab switching detected');
+  } else if (warningCount === 2) {
+    showWarningModal('Second warning: Current question marked as failed. Points will be deducted if already solved.');
+    await markCurrentQuestionFailed();
+  } else if (warningCount === 3) {
+    showWarningModal('Final warning: Test cancelled');
+    endTest();
+  }
+}
+
+function showWarningModal(message) {
+  const modal = document.getElementById('warningModal');
+  document.getElementById('warningMessage').textContent = message;
+  modal.style.display = 'flex';
+}
+
+function showError(message) {
+  document.getElementById('loginError').textContent = message;
+}
+
+async function markCurrentQuestionFailed() {
+  const currentQ = examQuestions[currentRound][currentQuestionIndex];
+  if (currentQ) {
+    if (currentQ._solved) {
+      let pointsToDeduct = 0;
+      switch(currentRound) {
+        case 'easy': pointsToDeduct = -2; break;
+        case 'medium': pointsToDeduct = -4; break;
+        case 'hard': pointsToDeduct = -8; break;
+      }
+      
+      const teamName = sessionStorage.getItem('teamName');
+      if (teamName) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('competitions')
+            .select('points')
+            .eq('username', teamName)
+            .single();
+            
+          if (error) throw error;
+          
+          const newPoints = Math.max(0, (data?.points || 0) + pointsToDeduct);
+          
+          const { error: updateError } = await supabaseClient
+            .from('competitions')
+            .update({ points: newPoints })
+            .eq('username', teamName);
+            
+          if (updateError) throw updateError;
+        } catch (err) {
+          console.error('Failed to update points:', err);
+        }
+      }
+    }
+    
+    currentQ._failed = true;
+    currentQ._solved = false; 
+    renderQuestionList();
+    renderQuestionProgress();
+    renderRoundInfo();
+  }
+}
+
+function endTest() {
+  document.location.reload();
+}
+
+function initializeMonacoEditor() {
+  if (monacoEditor) return;
+  require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
+  require(['vs/editor/editor.main'], function() {
+    monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
+      value: '',
+      language: 'python',
+      theme: 'vs-dark',
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: 14,
+      fontFamily: "'JetBrains Mono', monospace",
+      scrollBeyondLastLine: false,
+      padding: { top: 10, bottom: 10 }
+    });
+    
+    const firstQuestion = examQuestions[currentRound][currentQuestionIndex];
+    if (firstQuestion) {
+      const lang = document.getElementById('runLanguageSelect').value;
+      monacoEditor.setValue(lang === 'python' ? firstQuestion.Skeleton_Python : firstQuestion.Skeleton_C);
+    }
+    
+    document.getElementById('runLanguageSelect').addEventListener('change', (e) => {
+      const lang = e.target.value;
+      if (monacoEditor && monacoEditor.getModel()) {
+        monaco.editor.setModelLanguage(monacoEditor.getModel(), lang);
+        const q = examQuestions[currentRound][currentQuestionIndex];
+        if (q) {
+          monacoEditor.setValue(lang === 'python' ? q.Skeleton_Python : q.Skeleton_C);
+        }
+      }
+    });
+  });
+}
+
+async function loadExamQuestions() {
+  const { data, error } = await supabaseClient.from('Questions').select('*');
+  if (error) {
+    console.error('Error fetching questions:', error);
+    return;
+  }
+  examQuestions.easy = data.filter(q => q.Type.toLowerCase() === "easy");
+  examQuestions.medium = data.filter(q => q.Type.toLowerCase() === "medium");
+  examQuestions.hard = data.filter(q => q.Type.toLowerCase() === "hard");
+}
+
+function renderRoundInfo() {
+  const roundElem = document.getElementById("currentRound");
+  roundElem.textContent = currentRound === "easy" ? "Easy Round" : currentRound === "medium" ? "Medium Round" : "Hard Round";
+  const total = examQuestions[currentRound].length;
+  const solved = examQuestions[currentRound].filter(q => q._solved).length;
+  document.getElementById("totalCount").textContent = total;
+  document.getElementById("solvedCount").textContent = solved;
+}
+
+function renderQuestionList() {
+  const listElem = document.getElementById("questionList");
+  listElem.innerHTML = "";
+  
+  const roundSelector = document.createElement("div");
+  roundSelector.className = "round-selector";
+  
+  const rounds = ["easy", "medium", "hard"];
+  rounds.forEach(round => {
+    const btn = document.createElement("button");
+    btn.className = `round-btn ${round} ${currentRound === round ? 'active' : ''}`;
+    btn.textContent = round.charAt(0).toUpperCase() + round.slice(1);
+    
+    if (round === "medium") {
+      const easySolved = examQuestions.easy.filter(q => q._solved).length;
+      btn.disabled = easySolved < Math.ceil(examQuestions.easy.length/2);
+    } else if (round === "hard") {
+      const mediumSolved = examQuestions.medium.filter(q => q._solved).length;
+      btn.disabled = mediumSolved < Math.ceil(examQuestions.medium.length/2);
+    }
+    
+    btn.addEventListener("click", () => {
+      if (!btn.disabled) {
+        currentRound = round;
+        currentQuestionIndex = 0;
+        loadQuestion(currentRound, currentQuestionIndex);
+        renderQuestionList();
+      }
+    });
+    roundSelector.appendChild(btn);
+  });
+  
+  listElem.appendChild(roundSelector);
+  
+  examQuestions[currentRound].forEach((q, idx) => {
+    const item = document.createElement("div");
+    item.className = "question-item";
+    item.textContent = `${currentRound.charAt(0).toUpperCase() + currentRound.slice(1)} ${idx + 1}`;
+    if(q._solved) item.classList.add("solved");
+    if(q._failed) item.classList.add("failed");
+    item.addEventListener("click", () => {
+      if (!q._failed) {  
+        currentQuestionIndex = idx;
+        loadQuestion(currentRound, currentQuestionIndex);
+      }
+    });
+    listElem.appendChild(item);
+  });
+  renderQuestionProgress();
+  renderRoundInfo();
+}
+
+function loadQuestion(round, index) {
+  const q = examQuestions[round] && examQuestions[round][index];
+  if (!q) return;
+  document.getElementById("questionTitle").textContent = q.Title || "";
+  document.getElementById("questionSummary").textContent = q.Summary || "";
+  document.getElementById("questionDescription").textContent = q.Description || "";
+  document.getElementById("questionExample").textContent = q.Example || "";
+  document.getElementById("questionConstraints").textContent = q.Constraints || "";
+  
+  const langSelect = document.getElementById("runLanguageSelect");
+  const lang = langSelect.value || "python";
+  if (monacoEditor && monacoEditor.getModel()) {
+    monaco.editor.setModelLanguage(monacoEditor.getModel(), lang);
+    monacoEditor.setValue(lang === "python" ? q.Skeleton_Python : q.Skeleton_C);
+  }
+  document.getElementById("output").textContent = "";
+  renderQuestionProgress();
+}
+
+function renderQuestionProgress() {
+  const progressElem = document.getElementById("questionProgress");
+  progressElem.innerHTML = "";
+  examQuestions[currentRound].forEach((q, idx) => {
+    const dot = document.createElement("div");
+    dot.className = "progress-dot";
+    if (idx === currentQuestionIndex) dot.classList.add("active");
+    if (q._solved) dot.classList.add("solved");
+    dot.setAttribute('title', `${currentRound.charAt(0).toUpperCase() + currentRound.slice(1)} Question ${idx + 1}`);
+    progressElem.appendChild(dot);
+  });
+}
+
+document.getElementById("runBtn").addEventListener("click", async () => {
+  const runLang = document.getElementById("runLanguageSelect").value;
+  const question = examQuestions[currentRound][currentQuestionIndex];
+  let userCode = monacoEditor ? monacoEditor.getValue() : "";
+  let fullTemplate = buildFullTemplate(question, runLang, userCode);
+  document.getElementById("output").innerHTML = '<div class="loader"></div>';
+  if (runLang === "python") {
+    await runPython(fullTemplate, question);
+  } else if (runLang === "c") {
+    await runC(fullTemplate, question);
+  }
+});
+
+document.getElementById("prevQuestion").addEventListener("click", () => {
+  if (currentQuestionIndex > 0) {
+    currentQuestionIndex--;
+    loadQuestion(currentRound, currentQuestionIndex);
+  }
+});
+document.getElementById("nextQuestion").addEventListener("click", () => {
+  if (currentQuestionIndex < examQuestions[currentRound].length - 1) {
+    currentQuestionIndex++;
+    loadQuestion(currentRound, currentQuestionIndex);
+  }
+});
+
+function buildFullTemplate(question, lang, userSolution) {
+  let template = "";
+  let testCases, functionName;
+  try {
+    testCases = JSON.parse(question.Test_Cases);
+  } catch (e) {
+    testCases = [];
+  }
+  if (lang === "python") {
+    const sigRegex = /def\s+(\w+)\s*\(/;
+    const match = userSolution.match(sigRegex);
+    functionName = match ? match[1] : "function";
+  } else {
+    const sigRegex = /(\w+)\s+(\w+)\s*\(/;
+    const match = userSolution.match(sigRegex);
+    functionName = match ? match[2] : "function";
+  }
+  const DEFAULT_TEMPLATES = {
+    python: `
 # Python Test Harness for <<FUNCTION_NAME>>
 /* USER SOLUTION HERE */
 
@@ -21,7 +383,7 @@ def run_tests():
 
 _test_results = run_tests()
 `,
-  c: `
+    c: `
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -44,177 +406,10 @@ int main() {
   return passCount >= (total+1)/2 ? 0 : 1;
 }
 `
-};
-
-const skeletons = {
-  python: `def lengthOfLongestSubstring(s):
-    char_index = {}
-    max_length = 0
-    start = 0
-    for end, char in enumerate(s):
-        if char in char_index and char_index[char] >= start:
-            start = char_index[char] + 1
-        else:
-            max_length = max(max_length, end - start + 1)
-        char_index[char] = end
-    return max_length`,
-  c: `int lengthOfLongestSubstring(char* s) {
-  int n = strlen(s);
-  int char_set[256] = {0};
-  int max_length = 0;
-  int start = 0;
-  
-  for (int end = 0; end < n; end++) {
-    unsigned char current_char = s[end];
-    if (char_set[current_char] && char_set[current_char] > start) {
-      start = char_set[current_char];
-    }
-    char_set[current_char] = end + 1;
-    if(end - start + 1 > max_length) {
-      max_length = end - start + 1;
-    }
-  }
-  return max_length;
-}`
-};
-
-let pyodide = null;
-let currentRound = "easy"; 
-let rounds = { easy: { limit: 8 }, medium: { limit: 4 }, hard: { limit: 2 } };
-let examQuestions = { easy: [], medium: [], hard: [] };
-let currentQuestionIndex = 0; 
-
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadExamQuestions();
-  renderRoundInfo();
-  renderQuestionList();
-  loadQuestion(currentRound, currentQuestionIndex);
-  initCopyButton();
-});
-
-async function loadExamQuestions() {
-  let { data, error } = await supabaseClient.from('Questions').select('*');
-  if (error) {
-    console.error('Error fetching questions:', error);
-    return;
-  }
-  examQuestions.easy = data.filter(q => q.Type.toLowerCase() === "easy");
-  examQuestions.medium = data.filter(q => q.Type.toLowerCase() === "medium");
-  examQuestions.hard = data.filter(q => q.Type.toLowerCase() === "hard");
-}
-
-function renderRoundInfo() {
-  const roundElem = document.getElementById("currentRound");
-  let roundText = "";
-  if(currentRound === "easy") roundText = "Easy Round";
-  else if(currentRound === "medium") roundText = "Medium Round";
-  else roundText = "Hard Round";
-  roundElem.textContent = roundText;
-
-  const totalElem = document.getElementById("totalCount");
-  const solvedElem = document.getElementById("solvedCount");
-  const total = examQuestions[currentRound].length;
-  let solved = examQuestions[currentRound].filter(q => q._solved).length;
-  totalElem.textContent = total;
-  solvedElem.textContent = solved;
-}
-
-function renderQuestionList() {
-  const listElem = document.getElementById("questionList");
-  listElem.innerHTML = "";
-  examQuestions[currentRound].forEach((q, idx) => {
-    const item = document.createElement("div");
-    item.className = "question-item";
-    item.textContent = `${currentRound.charAt(0).toUpperCase()+currentRound.slice(1)} ${idx+1}`;
-    if(q._solved) item.classList.add("solved");
-    item.addEventListener("click", () => {
-      currentQuestionIndex = idx;
-      loadQuestion(currentRound, currentQuestionIndex);
-    });
-    listElem.appendChild(item);
-  });
-  renderQuestionProgress();
-  renderRoundInfo(); 
-}
-
-function loadQuestion(round, index) {
-  const q = examQuestions[round][index];
-  if(!q) return;
-  document.getElementById("questionTitle").textContent = q.Title;
-  document.getElementById("questionSummary").textContent = q.Summary;
-  document.getElementById("questionDescription").textContent = q.Description;
-  document.getElementById("questionExample").textContent = q.Example;
-  document.getElementById("questionConstraints").textContent = q.Constraints;
-  document.getElementById("questionTestCases").textContent = q.Test_Cases;
-  
-  document.getElementById("runLanguageSelect").value = "python";
-  document.getElementById("runEditor").value = q.Skeleton_Python;
-  document.getElementById("output").textContent = "";
-  renderQuestionProgress();
-}
-
-function initCopyButton() {
-  document.getElementById("copyBtn").addEventListener("click", () => {
-    const editor = document.getElementById("runEditor");
-    navigator.clipboard.writeText(editor.value);
-  });
-}
-
-document.getElementById("runLanguageSelect").addEventListener("change", () => {
-  const lang = document.getElementById("runLanguageSelect").value;
-  const q = examQuestions[currentRound][currentQuestionIndex];
-  document.getElementById("runEditor").value = lang === "python" ? q.Skeleton_Python : q.Skeleton_C;
-});
-
-document.getElementById("runBtn").addEventListener("click", async () => {
-  const runLang = document.getElementById("runLanguageSelect").value;
-  const question = examQuestions[currentRound][currentQuestionIndex];
-  let userCode = document.getElementById("runEditor").value;
-  let fullTemplate = "";
-  if(runLang === "python") {
-    fullTemplate = buildFullTemplate(question, runLang, userCode);
-    await runPython(fullTemplate, question);
-  } else if(runLang === "c") {
-    fullTemplate = buildFullTemplate(question, runLang, userCode);
-    await runC(fullTemplate, question);
-  }
-});
-
-document.getElementById("prevQuestion").addEventListener("click", () => {
-  if(currentQuestionIndex > 0) {
-    currentQuestionIndex--;
-    loadQuestion(currentRound, currentQuestionIndex);
-  }
-});
-
-document.getElementById("nextQuestion").addEventListener("click", () => {
-  if(currentQuestionIndex < examQuestions[currentRound].length - 1) {
-    currentQuestionIndex++;
-    loadQuestion(currentRound, currentQuestionIndex);
-  }
-});
-
-function buildFullTemplate(question, lang, userSolution) {
-  let template = "";
-  let testCases, functionName;
-  try {
-    testCases = JSON.parse(question.Test_Cases);
-  } catch (e) {
-    testCases = [];
-  }
-  if(lang === "python") {
-    const sigRegex = /def\s+(\w+)\s*\(/;
-    const match = userSolution.match(sigRegex);
-    functionName = match ? match[1] : "function";
-  } else {
-    const sigRegex = /(\w+)\s+(\w+)\s*\(/;
-    const match = userSolution.match(sigRegex);
-    functionName = match ? match[2] : "function";
-  }
-  
+  };
   template = DEFAULT_TEMPLATES[lang];
   template = template.replace(/<<FUNCTION_NAME>>/g, functionName);
-  if(lang === "python") {
+  if (lang === "python") {
     template = template.replace("<<TEST_CASES>>", JSON.stringify(testCases, null, 2));
   } else {
     let testCaseCode = '';
@@ -231,13 +426,25 @@ function buildFullTemplate(question, lang, userSolution) {
     template = template.replace("<<TEST_COUNT>>", testCases.length);
     template = template.replace("<<TEST_CASES>>", testCaseCode);
   }
-
   const parts = template.split("/* USER SOLUTION HERE */");
   if (parts.length >= 2) {
     template = parts[0] + userSolution + parts[1];
   }
-  
   return template;
+}
+
+async function loadPyodideAndPackages() {
+  try {
+    if (!window.loadPyodide) {
+      console.error('Pyodide loader not found');
+      return null;
+    }
+    const py = await window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+    return py;
+  } catch (error) {
+    console.error('Failed to load Pyodide:', error);
+    return null;
+  }
 }
 
 async function runPython(fullCode, question) {
@@ -245,7 +452,11 @@ async function runPython(fullCode, question) {
   try {
     if (!pyodide) {
       outputElem.textContent = "Loading Pyodide. Please wait...";
-      await loadPyodideAndPackages();
+      pyodide = await loadPyodideAndPackages();
+      if (!pyodide) {
+        outputElem.textContent = "Failed to load Pyodide. Cannot run Python code.";
+        return;
+      }
     }
     await pyodide.runPythonAsync(fullCode);
     const testResults = await pyodide.globals.get("_test_results").toJs();
@@ -260,7 +471,7 @@ async function runPython(fullCode, question) {
 }
 
 async function runC(fullCode, question) {
-  const outputElem = document.getElementById('output');
+  const outputElem = document.getElementById("output");
   try {
     outputElem.textContent = "Compiling...";
     const response = await fetch('https://c-compile.deno.dev/compile', {
@@ -287,71 +498,108 @@ async function runC(fullCode, question) {
   }
 }
 
-function renderQuestionProgress() {
-  const progressElem = document.getElementById("questionProgress");
-  progressElem.innerHTML = ""; 
-
-  const questions = examQuestions[currentRound];
-  questions.forEach((q, idx) => {
-    const progressDot = document.createElement("div");
-    progressDot.className = "progress-dot";
-    
-    if (idx === currentQuestionIndex) {
-      progressDot.classList.add("active");
+document.getElementById('leaderboardBtn').addEventListener('click', async () => {
+  try {
+    const { data, error } = await supabaseClient
+      .from('competitions')
+      .select('username, points')
+      .order('points', { ascending: false });
+      
+    if (error || !data || data.length === 0) {
+      showFrozenLeaderboardModal();
+      return;
     }
     
-    if (q._solved) {
-      progressDot.classList.add("solved");
-    }
+    showLeaderboardModal(data);
+  } catch (err) {
+    showFrozenLeaderboardModal();
+    console.error('Failed to fetch leaderboard:', err);
+  }
+});
 
-    progressDot.setAttribute('title', `${currentRound.charAt(0).toUpperCase()+currentRound.slice(1)} Question ${idx+1}`);
-
-    progressElem.appendChild(progressDot);
-  });
+function showLeaderboardModal(leaderboardData) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.display = 'flex';
+  
+  const content = document.createElement('div');
+  content.className = 'modal-content leaderboard-content';
+  
+  content.innerHTML = `
+    <h2><i class="fas fa-trophy"></i> Leaderboard</h2>
+    <div class="leaderboard-table">
+      <div class="leaderboard-header">
+        <span>Team</span>
+        <span>Points</span>
+      </div>
+      ${leaderboardData.map((entry, index) => `
+        <div class="leaderboard-row ${index < 3 ? 'top-' + (index + 1) : ''}">
+          <span>${entry.username}</span>
+          <span>${entry.points}</span>
+        </div>
+      `).join('')}
+    </div>
+    <button onclick="this.closest('.modal').remove()" class="btn-primary">Close</button>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
 }
 
-function markQuestionSolved(question, passed, total) {
-  const isSolved = passed >= Math.ceil(total/2);
-  
-  const questions = examQuestions[currentRound];
-  const questionIndex = questions.findIndex(q => q === question);
-  
-  if (questionIndex !== -1) {
-    questions[questionIndex]._solved = isSolved;
+function showFrozenLeaderboardModal() {
+  const modal = document.getElementById('frozenLeaderboardModal');
+  modal.style.display = 'flex';
+}
+
+async function markQuestionSolved(question, passed, total) {
+  const solved = passed >= Math.ceil(total/2);
+  const idx = examQuestions[currentRound].findIndex(q => q === question);
+  if(idx !== -1) {
+    if (examQuestions[currentRound][idx]._failed) {
+      return;
+    }
+    
+    if (solved && !examQuestions[currentRound][idx]._solved) {
+      let pointsToAdd = 0;
+      switch(currentRound) {
+        case 'easy': pointsToAdd = 2; break;
+        case 'medium': pointsToAdd = 4; break;
+        case 'hard': pointsToAdd = 8; break;
+      }
+      
+      const teamName = sessionStorage.getItem('teamName');
+      if (teamName) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('competitions')
+            .select('points')
+            .eq('username', teamName)
+            .single();
+            
+          if (error) throw error;
+          
+          const newPoints = (data?.points || 0) + pointsToAdd;
+          
+          const { error: updateError } = await supabaseClient
+            .from('competitions')
+            .update({ points: newPoints })
+            .eq('username', teamName);
+            
+          if (updateError) throw updateError;
+        } catch (err) {
+          console.error('Failed to update points:', err);
+        }
+      }
+    }
+    examQuestions[currentRound][idx]._solved = solved;
   }
-  
   renderQuestionList();
   renderQuestionProgress();
-  renderRoundInfo(); 
+  renderRoundInfo();
   checkRoundAdvance();
 }
 
 function checkRoundAdvance() {
-  const solvedCount = examQuestions[currentRound].filter(q => q._solved).length;
-  const total = examQuestions[currentRound].length;
-  if(total > 0 && solvedCount >= Math.ceil(total/2)) {
-    if(currentRound === "easy" && examQuestions.medium.length > 0) {
-      currentRound = "medium";
-      currentQuestionIndex = 0;
-      loadQuestion(currentRound, currentQuestionIndex);
-    } else if(currentRound === "medium" && examQuestions.hard.length > 0) {
-      currentRound = "hard";
-      currentQuestionIndex = 0;
-      loadQuestion(currentRound, currentQuestionIndex);
-    }
-    renderRoundInfo();
-    renderQuestionList();
-  }
-}
-
-async function loadPyodideAndPackages() {
-  if (!window.loadPyodide) {
-    const pyScript = document.createElement("script");
-    pyScript.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
-    document.head.appendChild(pyScript);
-    await new Promise(resolve => { pyScript.onload = resolve; });
-  }
-  if (!pyodide) {
-    pyodide = await loadPyodide();
-  }
+  renderRoundInfo();
+  renderQuestionList();
 }
