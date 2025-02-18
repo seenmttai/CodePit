@@ -298,13 +298,13 @@ async function markCurrentQuestionFailed() {
       let pointsToDeduct = 0;
       switch (currentRound) {
         case 'easy':
-          pointsToDeduct = -2;
+          pointsToDeduct = -5;
           break;
         case 'medium':
-          pointsToDeduct = -4;
+          pointsToDeduct = -15;
           break;
         case 'hard':
-          pointsToDeduct = -8;
+          pointsToDeduct = -25;
           break;
       }
 
@@ -842,13 +842,13 @@ async function markQuestionSolved(question, passed, total) {
       let pointsToAdd = 0;
       switch (currentRound) {
         case 'easy':
-          pointsToAdd = 2;
+          pointsToAdd = 5;
           break;
         case 'medium':
-          pointsToAdd = 4;
+          pointsToAdd = 15;
           break;
         case 'hard':
-          pointsToAdd = 8;
+          pointsToAdd = 25;
           break;
       }
 
