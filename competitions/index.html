@@ -1,10 +1,13 @@
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CodePit - Host Your Coding Competitions</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@700&family=Russo+One&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@700&family=Russo+One&family=Press+Start+2P&display=swap"
+    rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
@@ -15,9 +18,17 @@
     }
   </script>
 </head>
+
 <body>
   <button id="leaderboardBtn" class="btn-leaderboard" title="View Leaderboard" style="display: none;">
     <i class="fas fa-trophy"></i>
+  </button>
+  <div class="timer-container" style="display: none;">
+    <i class="fas fa-clock"></i>
+    <div id="timer">1:30:00</div>
+  </div>
+  <button id="endTestBtn" onclick="showEndTestConfirmation()" class="btn-end-test" style="display: none;">
+    <i class="fas fa-stop-circle"></i> End Test
   </button>
 
   <div id="loginScreen" class="login-screen">
@@ -46,9 +57,13 @@
 
   <div id="rulesScreen" class="rules-screen" style="display: none;">
     <header class="rules-header">
-      <div class="corner left">Amity</div>
+      <div class="corner left">
+        <img src="https://codepit.pages.dev/amity.png" alt="Amity Logo" class="header-logo">
+      </div>
       <div class="center">Hackrush</div>
-      <div class="corner right">ACPC</div>
+      <div class="corner right">
+        <img src="https://codepit.pages.dev/acpc.png" alt="ACPC Logo" class="header-logo">
+      </div>
     </header>
     <div class="rules-container">
       <h3>Competition Rules</h3>
@@ -94,15 +109,13 @@
         <div class="problem-list-header">
           <h2>Problems</h2>
           <div class="round-info">
-            <span id="currentRound">Easy Round</span>
-            (<span id="solvedCount">0</span>/<span id="totalCount">0</span>)
+            <span id="currentRound">Easy Round</span> (<span id="solvedCount">0</span>/<span id="totalCount">0</span>)
           </div>
         </div>
         <div class="question-progress" id="questionProgress"></div>
         <div class="question-list" id="questionList"></div>
       </aside>
 
-      <!-- Right Main Workspace with Overflow Scroll -->
       <section class="question-workspace scrollable-container">
         <div class="big-question-container">
           <div class="question-details-container">
@@ -116,12 +129,10 @@
                 <p id="questionSummary"></p>
                 <p id="questionDescription"></p>
               </section>
-
               <section class="example-section">
                 <h3>Example</h3>
                 <pre id="questionExample"></pre>
               </section>
-
               <section class="constraints-section">
                 <h3>Constraints</h3>
                 <pre id="questionConstraints"></pre>
@@ -129,7 +140,6 @@
             </div>
           </div>
 
-          <!-- Code Editor Section -->
           <div class="editor-toolbar">
             <div class="editor-actions">
               <select id="runLanguageSelect">
@@ -155,9 +165,7 @@
           <button id="prevQuestion" class="btn-nav">
             <i class="fas fa-chevron-left"></i> Previous
           </button>
-          <button id="nextQuestion" class="btn-nav">
-            Next <i class="fas fa-chevron-right"></i>
-          </button>
+          <button id="nextQuestion" class="btn-nav"> Next <i class="fas fa-chevron-right"></i> </button>
         </div>
       </section>
     </main>
@@ -176,10 +184,12 @@
       <h2><i class="fas fa-snowflake"></i> Frozen Leaderboard</h2>
       <p>Last 15 minutes!</p>
       <div class="timer">HURRY UP!</div>
-      <button onclick="document.getElementById('frozenLeaderboardModal').style.display = 'none'" class="btn-primary">Got it!</button>
+      <button onclick="document.getElementById('frozenLeaderboardModal').style.display = 'none'"
+        class="btn-primary">Got it!</button>
     </div>
   </div>
-  
+
   <script type="module" src="script.js"></script>
 </body>
+
 </html>

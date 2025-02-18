@@ -130,6 +130,7 @@ body {
 .rules-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 1rem;
   font-family: var(--font-secondary);
   font-size: 1.5rem;
@@ -137,6 +138,11 @@ body {
 .rules-header .corner {
   width: 25%;
   text-align: center;
+}
+.header-logo {
+  max-height: 50px;
+  width: auto;
+  object-fit: contain;
 }
 .rules-header .center {
   width: 50%;
@@ -169,6 +175,7 @@ body {
   margin-top: 1.5rem;
 }
 
+/* Competition Screen */
 .competition-screen {
   height: 100vh;
 }
@@ -515,6 +522,7 @@ main {
   background: #4191e1;
 }
 
+/* Leaderboard Modal Styles */
 .leaderboard-content {
   max-width: 500px !important;
   background: var(--bg-secondary) !important;
@@ -626,6 +634,99 @@ main {
   border-bottom: 2px solid var(--error-color);
 }
 
+.timer-container {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: rgba(20, 27, 45, 0.7);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  z-index: 1100;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#timer {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+#timer.warning {
+  color: var(--error-color);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+#endTestBtn {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 1100;
+  transition: all 0.2s ease;
+}
+
+#endTestBtn:hover {
+  background: var(--error-color);
+  color: white;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn-danger {
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+  background: #d73a49;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(248, 81, 73, 0.3);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--border-color);
+  transform: translateY(-2px);
+}
+
 .loader {
   display: inline-block;
   width: 50px;
@@ -639,5 +740,65 @@ main {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.fullscreen-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+}
+
+.fullscreen-warning-content {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 500px;
+  border: 2px solid var(--warning-color);
+}
+
+.fullscreen-warning h2 {
+  color: var(--warning-color);
+  margin-bottom: 1rem;
+  font-family: var(--font-secondary);
+}
+
+.fullscreen-warning p {
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.btn-fullscreen {
+  background: var(--warning-color);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-fullscreen:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(210, 153, 34, 0.3);
+}
+
+@media print {
+  body * {
+    display: none !important;
+  }
+  body:after {
+    content: "Printing is not allowed!";
+    display: block !important;
   }
 }
