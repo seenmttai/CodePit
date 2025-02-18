@@ -175,7 +175,6 @@ body {
   margin-top: 1.5rem;
 }
 
-/* Competition Screen */
 .competition-screen {
   height: 100vh;
 }
@@ -522,7 +521,6 @@ main {
   background: #4191e1;
 }
 
-/* Leaderboard Modal Styles */
 .leaderboard-content {
   max-width: 500px !important;
   background: var(--bg-secondary) !important;
