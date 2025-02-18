@@ -23,6 +23,9 @@
   <button id="leaderboardBtn" class="btn-leaderboard" title="View Leaderboard" style="display: none;">
     <i class="fas fa-trophy"></i>
   </button>
+  <button id="compilerBtn" class="btn-compiler" title="Open Compiler" style="display: none;">
+    <i class="fas fa-code"></i>
+  </button>
   <div class="timer-container" style="display: none;">
     <i class="fas fa-clock"></i>
     <div id="timer">1:30:00</div>
@@ -186,6 +189,23 @@
       <div class="timer">HURRY UP!</div>
       <button onclick="document.getElementById('frozenLeaderboardModal').style.display = 'none'"
         class="btn-primary">Got it!</button>
+    </div>
+  </div>
+
+  <div id="compilerModal" class="compiler-modal">
+    <div class="compiler-modal-content">
+      <button id="closeCompiler" class="compiler-close">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="compiler-iframe-container">
+        <iframe
+          class="compiler-iframe"
+          frameBorder="0"
+          src="https://onecompiler.com/embed/"
+          width="100%"
+          height="100%"
+        ></iframe>
+      </div>
     </div>
   </div>
 

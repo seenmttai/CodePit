@@ -800,3 +800,80 @@ main {
     display: block !important;
   }
 }
+
+.btn-compiler {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 1100;
+  transition: background-color 0.2s ease;
+  display: none;
+}
+
+.btn-compiler:hover {
+  background: #4191e1;
+}
+
+.compiler-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.compiler-modal-content {
+  background: var(--bg-secondary);
+  width: 90%;
+  max-width: 1200px;
+  height: 80vh;
+  border-radius: 12px;
+  position: relative;
+  padding: 20px;
+}
+
+.compiler-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--error-color);
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.compiler-close:hover {
+  transform: scale(1.1);
+}
+
+.compiler-iframe-container {
+  width: 100%;
+  height: calc(100% - 20px);
+  margin-top: 20px;
+}
+
+.compiler-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+}

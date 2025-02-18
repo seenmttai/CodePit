@@ -1,6 +1,6 @@
 if (localStorage.getItem('banned')) {
-  alert('Your team has been banned for cheating attempts');
-  window.location.href = 'https://codepit.pages.dev/banned';
+ alert('Your team has been banned for cheating attempts');
+ window.location.href = 'https://codepit.pages.dev/banned';
 }
 
 let isFullscreen = false;
@@ -8,7 +8,16 @@ let fullscreenWarningShown = false;
 let warningCount = 0;
 let lastActiveTime = Date.now();
 
-window.addEventListener('blur', handleCheatingAttempt);
+window.addEventListener('blur', (e) => {
+  const activeElement = document.activeElement;
+  const isCompilerIframe = activeElement && activeElement.tagName === 'IFRAME' && 
+                          activeElement.classList.contains('compiler-iframe');
+  
+  if (!isCompilerIframe) {
+    handleCheatingAttempt('focus');
+  }
+});
+
 document.addEventListener('visibilitychange', handleVisibilityChange);
 window.addEventListener('focus', () => {
   lastActiveTime = Date.now();
@@ -214,6 +223,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   }
 
   document.querySelector('.timer-container').style.display = 'flex';
+  document.getElementById('compilerBtn').style.display = 'block'; 
   testStartTime = Date.now();
   startTimer();
 
@@ -937,3 +947,13 @@ async function enterFullscreen() {
     console.error('Failed to enter fullscreen:', err);
   }
 }
+
+document.getElementById('compilerBtn').addEventListener('click', () => {
+  const modal = document.getElementById('compilerModal');
+  modal.style.display = 'flex';
+});
+
+document.getElementById('closeCompiler').addEventListener('click', () => {
+  const modal = document.getElementById('compilerModal');
+  modal.style.display = 'none';
+});
