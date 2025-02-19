@@ -223,7 +223,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   setTimeout(() => {
     document.getElementById('endTestBtn').style.display = 'block';
     endTestButtonShown = true;
-  }, 1); 
+  }, 1000*60*60); 
 
   await loadExamQuestions();
   renderRoundInfo();
@@ -367,6 +367,12 @@ function redirectToThanks() {
   window.location.href = 'https://codepit.pages.dev/competitions/thank-you';
 }
 
+window.redirectToThanks = redirectToThanks;
+
+window.showEndTestConfirmation = showEndTestConfirmation;
+
+window.endTest = endTest;
+
 function startTimer() {
   const timerDisplay = document.getElementById('timer');
   const testDuration = 90 * 60 * 1000;
@@ -402,7 +408,7 @@ function initializeMonacoEditor() {
 
   require.config({
     paths: {
-      vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs',
+      vs: 'https://cdn.jsdelivr.net/pyodide/v0.23.4/min/vs',
     },
   });
 
