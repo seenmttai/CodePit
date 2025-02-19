@@ -354,7 +354,7 @@ function showEndTestConfirmation() {
     <h2>⚠️ End Test Confirmation</h2>
     <p>Are you sure you want to end the test? This action cannot be undone.</p>
     <div class="modal-buttons">
-      <button onclick="redirectToThanks()" class="btn-danger">Yes, End Test</button>
+      <a href = "https://codepit.pages.dev/competitions/thank-you"><button class="btn-danger">Yes, End Test</button></a>
       <button onclick="this.closest('.modal').remove()" class="btn-secondary">Cancel</button>
     </div>
   `;
