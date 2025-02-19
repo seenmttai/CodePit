@@ -223,7 +223,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   setTimeout(() => {
     document.getElementById('endTestBtn').style.display = 'block';
     endTestButtonShown = true;
-  }, 60 * 60 * 1000); 
+  }, 1); 
 
   await loadExamQuestions();
   renderRoundInfo();
@@ -335,7 +335,7 @@ async function markCurrentQuestionFailed() {
   }
 }
 
-function endTest(automatic = false) {
+function endTest(automatic = true) {
   if (!automatic) {
     showEndTestConfirmation();
   } else {
@@ -364,7 +364,7 @@ function showEndTestConfirmation() {
 }
 
 function redirectToThanks() {
-  window.location.href = 'https://codepit.pages.dev/thanks';
+  window.location.href = 'https://codepit.pages.dev/thank-you';
 }
 
 function startTimer() {
