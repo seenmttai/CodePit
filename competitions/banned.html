@@ -1,0 +1,109 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Suspended</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #0a192f 0%, #1e3a8a 100%);
+      color: #cbd5e1;
+    }
+
+    .container {
+      text-align: center;
+      padding: 3rem;
+      background: #0f172a;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      max-width: 600px;
+      animation: fadeIn 0.8s ease-out;
+      border: 1px solid #475569;
+    }
+
+    h1 {
+      margin-bottom: 1.5rem;
+      color: #60a5fa;
+      font-size: 2.5rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    p {
+      line-height: 1.7;
+      margin-bottom: 2rem;
+      color: #94a3b8;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: #3b82f6;
+      color: #f0f9ff;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    .button:hover {
+      background: #2563eb;
+      transform: translateY(-3px);
+    }
+
+    .icon {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 2rem;
+      fill: #60a5fa;
+      animation: pulse 2s infinite;
+    }
+
+    .chide-text {
+      color: #f87171;
+      font-weight: bold;
+      margin-top: 1.5rem;
+      font-size: 1rem;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+      20%, 40%, 60%, 80% { transform: translateX(8px); }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <svg class="icon" style="animation: shake 1s infinite, pulse 2s infinite" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+    </svg>
+    <h1>Access Suspended</h1>
+    <p>Your access has been temporarily suspended due to detected cheating or violation of our terms of service. This action is taken to maintain the integrity of our system.</p>
+    <p>If you believe this is an error, please contact the volunteers present at the competition.</p>
+    <p class="chide-text">Cheating undermines the spirit of fair competition and will not be tolerated!</p>
+  </div>
+</body>
+</html>

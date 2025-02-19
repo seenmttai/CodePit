@@ -1,0 +1,173 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competition Results - Coming Soon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+    .glowing-title {
+      font-family: 'Inter', monospace;
+    }
+    body {
+  margin: 0;
+  height: 100vh;
+  background: linear-gradient(135deg, #0a0a2e 0%, #000000 100%);
+  font-family: 'Arial', sans-serif;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.glowing-title {
+  font-size: 2.5rem;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(0, 191, 255, 0.3);
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.result-status {
+  position: relative;
+  margin: 40px 0;
+}
+
+.pulsing-box {
+  position: relative;
+  padding: 30px 50px;
+  border: 2px solid #1a237e;
+  border-radius: 10px;
+  background: rgba(13, 13, 61, 0.3);
+  backdrop-filter: blur(5px);
+  animation: pulse 3s infinite;
+}
+
+.status-text {
+  font-size: 1.8rem;
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, #00bcd4, #3f51b5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.countdown {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.spinner {
+  width: 80px;
+  height: 80px;
+  animation: rotate 2s linear infinite;
+}
+
+.track {
+  fill: none;
+  stroke: #1a237e;
+  stroke-width: 4;
+}
+
+.path {
+  fill: none;
+  stroke: #3f51b5;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 125.6;
+  stroke-dashoffset: 125.6;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 5px rgba(0, 191, 255, 0.3); }
+  50% { text-shadow: 0 0 10px rgba(0, 191, 255, 0.5), 0 0 15px rgba(0, 191, 255, 0.4); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(26, 35, 126, 0.2); }
+  50% { transform: scale(1.01); box-shadow: 0 0 15px rgba(63, 81, 181, 0.3); }
+}
+
+@keyframes rotate {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes dash {
+  0% { stroke-dashoffset: 125.6; }
+  50% { stroke-dashoffset: 31.4; transform: rotate(135deg); }
+  100% { stroke-dashoffset: 125.6; transform: rotate(450deg); }
+}
+
+.particle {
+  position: absolute;
+  background: rgba(63, 81, 181, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float 4s infinite linear;
+}
+
+@keyframes float {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  25% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
+  50% { transform: translateY(-40px) translateX(-10px); }
+  75% { transform: translateY(-60px) translateX(10px); opacity: 0.4; }
+  100% { transform: translateY(-80px) translateX(0); opacity: 0; }
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="glowing-title">Hackrush 2025</h1>
+    <div class="result-status">
+      <div class="pulsing-box">
+        <span class="status-text">Results Processing</span>
+        <div class="particles"></div>
+      </div>
+    </div>
+    <div class="countdown">
+      <svg class="spinner" viewBox="0 0 50 50">
+        <circle class="track" cx="25" cy="25" r="20"/>
+        <circle class="path" cx="25" cy="25" r="20"/>
+      </svg>
+      <p>Final results will be announced shortly</p>
+    </div>
+  </div>
+  <script>
+    function createParticles() {
+  const container = document.body;
+  const particleCount = 50;
+
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    
+    const size = Math.random() * 3 + 2;
+    const left = Math.random() * 100;
+    const delay = Math.random() * 4;
+    const duration = 3 + Math.random() * 2;
+
+    Object.assign(particle.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      left: `${left}vw`,
+      top: '110%',
+      animationDelay: `${delay}s`,
+      animationDuration: `${duration}s`
+    });
+
+    container.appendChild(particle);
+  }
+}
+
+window.addEventListener('load', createParticles);
+  </script>
+</body>
+</html>

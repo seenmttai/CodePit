@@ -1,6 +1,6 @@
 if (localStorage.getItem('banned')) {
- alert('Your team has been banned for cheating attempts');
- window.location.href = 'https://codepit.pages.dev/banned';
+  alert('Your team has been banned for cheating attempts');
+  window.location.href = 'https://codepit.pages.dev/banned';
 }
 
 let isFullscreen = false;
@@ -32,6 +32,7 @@ function handleFullscreenChange() {
   isFullscreen = checkFullscreen();
   if (!isFullscreen) {
     handleCheatingAttempt('fullscreen');
+    showFullscreenWarning(); 
   }
 }
 
@@ -154,28 +155,20 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
       const competitionReady = await checkCompetitionStatus();
 
       if (competitionReady) {
-        const { data: existingTeam, error: teamError } = await supabaseClient
+        const { error: deleteError } = await supabaseClient
           .from('competitions')
-          .select('*')
-          .eq('username', teamName)
-          .single();
+          .delete()
+          .eq('username', teamName);
 
-        if (teamError && teamError.code !== 'PGRST116') {
-          throw teamError;
-        }
-
-        if (existingTeam) {
-          const { error: deleteError } = await supabaseClient
-            .from('competitions')
-            .delete()
-            .eq('username', teamName);
-
-          if (deleteError) throw deleteError;
-        }
+        if (deleteError) throw deleteError;
 
         const { error: insertError } = await supabaseClient
           .from('competitions')
-          .insert([{ username: teamName, points: 0 }]);
+          .insert([{ 
+            username: teamName, 
+            points: 0,
+            last_points_at: new Date().toISOString()
+          }]);
 
         if (insertError) throw insertError;
 
@@ -777,9 +770,9 @@ document.getElementById('leaderboardBtn').addEventListener('click', async () => 
   try {
     const { data, error } = await supabaseClient
       .from('competitions')
-      .select('username, points')
-      .order('points', { ascending: false });
-
+      .select('username, points, last_points_at')
+      .order('points', { ascending: false }) 
+      .order('last_points_at', { ascending: true }); 
     if (error || !data || data.length === 0) {
       showFrozenLeaderboardModal();
       return;
@@ -868,7 +861,10 @@ async function markQuestionSolved(question, passed, total) {
 
           const { error: updateError } = await supabaseClient
             .from('competitions')
-            .update({ points: newPoints })
+            .update({ 
+              points: newPoints,
+              last_points_at: new Date().toISOString() 
+            })
             .eq('username', teamName);
 
           if (updateError) throw updateError;
@@ -911,7 +907,8 @@ let timerInterval = null;
 let endTestButtonShown = false;
 
 function showFullscreenWarning() {
-  if (!fullscreenWarningShown) {
+  const existingWarning = document.querySelector('.fullscreen-warning');
+  if (!existingWarning) {
     const warning = document.createElement('div');
     warning.className = 'fullscreen-warning';
     warning.innerHTML = `

@@ -565,6 +565,15 @@ main {
   border-bottom: none;
 }
 
+.leaderboard-row span {
+  flex: 1;
+  text-align: left;
+}
+
+.leaderboard-row span:last-child {
+  text-align: right;
+}
+
 .leaderboard-row:hover {
   background: var(--bg-secondary);
 }
@@ -791,16 +800,6 @@ main {
   box-shadow: 0 4px 12px rgba(210, 153, 34, 0.3);
 }
 
-@media print {
-  body * {
-    display: none !important;
-  }
-  body:after {
-    content: "Printing is not allowed!";
-    display: block !important;
-  }
-}
-
 .btn-compiler {
   position: fixed;
   top: 80px;
@@ -876,4 +875,14 @@ main {
   height: 100%;
   border: none;
   border-radius: 8px;
+}
+
+@media print {
+  body * {
+    display: none !important;
+  }
+  body:after {
+    content: "Printing is not allowed!";
+    display: block !important;
+  }
 }
