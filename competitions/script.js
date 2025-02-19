@@ -1,6 +1,6 @@
 if (localStorage.getItem('banned')) {
   alert('Your team has been banned for cheating attempts');
-  window.location.href = 'https://codepit.pages.dev/banned';
+  window.location.href = 'https://codepit.pages.dev/competitions/banned';
 }
 
 let isFullscreen = false;
@@ -55,7 +55,7 @@ function handleCheatingAttempt(type = 'general') {
     localStorage.setItem('banned', 'true');
     showWarningModal('Final warning: Test cancelled. Your team has been banned.');
     setTimeout(() => {
-      window.location.href = 'https://codepit.pages.dev/banned';
+      window.location.href = 'https://codepit.pages.dev/competitions/banned';
     }, 3000);
   }
 }
@@ -364,7 +364,7 @@ function showEndTestConfirmation() {
 }
 
 function redirectToThanks() {
-  window.location.href = 'https://codepit.pages.dev/thank-you';
+  window.location.href = 'https://codepit.pages.dev/competitions/thank-you';
 }
 
 function startTimer() {
