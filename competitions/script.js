@@ -220,11 +220,6 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   testStartTime = Date.now();
   startTimer();
 
-  setTimeout(() => {
-    document.getElementById('endTestBtn').style.display = 'block';
-    endTestButtonShown = true;
-  }, 1000*60*60); 
-
   await loadExamQuestions();
   renderRoundInfo();
   renderQuestionList();
@@ -335,7 +330,7 @@ async function markCurrentQuestionFailed() {
   }
 }
 
-function endTest(automatic = true) {
+function endTest(automatic = false) {
   if (!automatic) {
     showEndTestConfirmation();
   } else {
@@ -354,7 +349,7 @@ function showEndTestConfirmation() {
     <h2>⚠️ End Test Confirmation</h2>
     <p>Are you sure you want to end the test? This action cannot be undone.</p>
     <div class="modal-buttons">
-      <a href = "https://codepit.pages.dev/competitions/thank-you"><button class="btn-danger">Yes, End Test</button></a>
+      <button onclick="redirectToThanks()" class="btn-danger">Yes, End Test</button>
       <button onclick="this.closest('.modal').remove()" class="btn-secondary">Cancel</button>
     </div>
   `;
@@ -363,19 +358,15 @@ function showEndTestConfirmation() {
   document.body.appendChild(modal);
 }
 
-function redirectToThanks() {
+window.redirectToThanks = function() {
   window.location.href = 'https://codepit.pages.dev/competitions/thank-you';
 }
-
-window.redirectToThanks = redirectToThanks;
-
-window.showEndTestConfirmation = showEndTestConfirmation;
-
-window.endTest = endTest;
 
 function startTimer() {
   const timerDisplay = document.getElementById('timer');
   const testDuration = 90 * 60 * 1000;
+  const oneHour = 60 * 60 * 1000;
+  const endTestBtn = document.getElementById('endTestBtn');
 
   function updateTimer() {
     const now = Date.now();
@@ -397,6 +388,11 @@ function startTimer() {
     if (timeRemaining < 300000) {
       timerDisplay.classList.add('warning');
     }
+
+    if (!endTestButtonShown && timeElapsed >= oneHour) {
+      endTestBtn.style.display = 'block';
+      endTestButtonShown = true;
+    }
   }
 
   timerInterval = setInterval(updateTimer, 1000);
@@ -408,7 +404,7 @@ function initializeMonacoEditor() {
 
   require.config({
     paths: {
-      vs: 'https://cdn.jsdelivr.net/pyodide/v0.23.4/min/vs',
+      vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs',
     },
   });
 
