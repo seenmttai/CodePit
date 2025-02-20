@@ -2,183 +2,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodePit Problem Generator</title>
+  <title>CodePit - Coming Soon</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script type="module" src="script.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .required-label::after {
-      content: " *";
-      color: red;
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #121212;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: #fff;
+  }
+  
+  .container {
+    text-align: center;
+  }
+  
+  h1 {
+    font-size: 3.5rem;
+    margin: 1rem 0;
+    background: linear-gradient(45deg, #00ff00, #00cc00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  p {
+    font-size: 1.2rem;
+    color: #888;
+  }
+  
+  .logo {
+    margin-bottom: 2rem;
+  }
+  
+  .code-brackets path {
+    stroke-dasharray: 300;
+    stroke-dashoffset: 300;
+    animation: draw 2s forwards, glow 2s infinite alternate;
+  }
+  
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
     }
-    .optional-label::after {
-      content: " (Optional)";
-      color: #6b7280;
-      font-style: italic;
+  }
+  
+  @keyframes glow {
+    from {
+      filter: drop-shadow(0 0 2px #00ff00);
     }
+    to {
+      filter: drop-shadow(0 0 8px #00ff00);
+    }
+  }
+  
+  @media (max-width: 600px) {
+    h1 {
+      font-size: 2.5rem;
+    }
+    
+    .logo svg {
+      width: 150px;
+      height: 150px;
+    }
+  }
   </style>
 </head>
 <body>
-  <header>
-    <h1>CodePit Problem Generator</h1>
-  </header>
-  <main>
-    <section id="formSection">
-      <form id="problemForm">
-        <div class="split-container">
-          <div class="info-pane">
-            <h2>Problem Details</h2>
-            <div class="form-box">
-              <label for="questionJSON" class="optional-label">Insert Question via JSON</label>
-              <textarea id="questionJSON" name="questionJSON" rows="8" placeholder='{
-  "title": "Longest Palindromic Substring Length",
-  "summary": "Determine the length of the longest palindromic substring in the input string.",
-  "description": "Given a string s, find the length of the longest palindromic substring. A palindrome is a string that reads the same backward as forward. Call your function with the provided string parameter.",
-  "example": "Example:\nInput: s = \"babad\"\nOutput: 3\nExplanation: The longest palindromic substring is \"bab\" or \"aba\", both with length 3.",
-  "constraints": "- 1 <= s.length <= 1000\n- s consists of printable ASCII characters",
-  "testcases": "[\n  {\"params\": [\"babad\"], \"expected\": 3},\n  {\"params\": [\"cbbd\"], \"expected\": 2},\n  {\"params\": [\"a\"], \"expected\": 1}\n]",
-  "code": {
-    "python": "def longestPalindromeLength(s):\n    if not s:\n        return 0\n    n = len(s)\n    max_len = 1\n    for i in range(n):\n        # Odd length palindromes\n        l, r = i, i\n        while l >= 0 and r < n and s[l] == s[r]:\n            max_len = max(max_len, r - l + 1)\n            l -= 1\n            r += 1\n        # Even length palindromes\n        l, r = i, i+1\n        while l >= 0 and r < n and s[l] == s[r]:\n            max_len = max(max_len, r - l + 1)\n            l -= 1\n            r += 1\n    return max_len",
-    "c": "#include <string.h>\n\nint longestPalindromeLength(char* s) {\n    int n = strlen(s);\n    if(n == 0) return 0;\n    int maxLen = 1;\n    for (int i = 0; i < n; i++) {\n        // Odd length\n        int l = i, r = i;\n        while(l >= 0 && r < n && s[l] == s[r]) {\n            int len = r - l + 1;\n            if(len > maxLen) maxLen = len;\n            l--; r++;\n        }\n        // Even length\n        l = i; r = i+1;\n        while(l >= 0 && r < n && s[l] == s[r]) {\n            int len = r - l + 1;\n            if(len > maxLen) maxLen = len;\n            l--; r++;\n        }\n    }\n    return maxLen;\n}"
-  }
-}'></textarea>
-              <button type="button" id="insertJSONBtn">Insert via JSON</button>
-            </div>
-            <div class="form-box">
-              <label for="questionType" class="required-label">Question Type</label>
-              <select id="questionType" name="questionType" required>
-                <!-- Dynamically populated options e.g., Easy-1, Easy-2, Medium-1, etc. -->
-              </select>
-            </div>
-            <div class="form-box">
-              <label for="difficulty" class="required-label">Difficulty</label>
-              <select id="difficulty" name="difficulty" required>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-            <div class="form-box">
-              <label for="title" class="required-label">Title</label>
-              <input id="title" name="title" type="text" required value="Longest Substring Without Repeating Characters">
-            </div>
-            <div class="form-box">
-              <label for="summary" class="required-label">Summary</label>
-              <textarea id="summary" name="summary" rows="2" required>Given a string, find the length of the longest substring without repeating characters.</textarea>
-            </div>
-            <div class="form-box">
-              <label for="description" class="required-label">Description</label>
-              <textarea id="description" name="description" rows="4" required>Given a string s, find the length of the longest substring without repeating characters.
-
-A substring is a contiguous sequence of characters in the string.
-
-Call your function with the provided string parameter.</textarea>
-            </div>
-            <div class="form-box">
-              <label for="example" class="required-label">Example (Input/Output)</label>
-              <textarea id="example" name="example" rows="4" required>Example:
-Input: s = "abcabcbb"
-Output: 3
-Explanation: The longest substring is "abc", with length 3.</textarea>
-            </div>
-            <div class="form-box">
-              <label for="constraints" class="required-label">Constraints</label>
-              <textarea id="constraints" name="constraints" rows="3" required>- 0 <= s.length <= 5 * 10^4
-- s consists of English letters, digits, symbols, and spaces</textarea>
-            </div>
-            <div class="form-box">
-              <label for="testcases" class="required-label">Test Cases (JSON Array)</label>
-              <textarea id="testcases" name="testcases" rows="4" required>[
-  {"params": ["abcabcbb"], "expected": 3},
-  {"params": ["bbbbb"], "expected": 1},
-  {"params": ["pwwkew"], "expected": 3},
-  {"params": [" "], "expected": 1},
-  {"params": [""], "expected": 0}
-]</textarea>
-            </div>
-          </div>
-          <div class="editor-pane">
-            <h2>Solution Editor</h2>
-            <div class="editor-header">
-              <select id="languageSelect">
-                <option value="python" selected>Python</option>
-                <option value="c">C</option>
-              </select>
-            </div>
-            <div class="editor-container">
-              <textarea id="codeEditor" class="code-editor" rows="20"></textarea>
-              <button type="button" class="copy-button">Copy</button>
-            </div>
-            <div class="extraction-controls">
-              <button type="button" id="extractBtn">Extract Function Signature</button>
-              <div class="extract-box">
-                <label for="paramExtracted" class="optional-label">Parameters</label>
-                <input id="paramExtracted" type="text" readonly>
-              </div>
-              <div class="extract-box">
-                <label for="returnExtracted" class="optional-label">Return Value(s)</label>
-                <input id="returnExtracted" type="text" readonly>
-              </div>
-            </div>
-          </div>
-        </div>
-        <fieldset class="comparison-fieldset">
-          <legend>Output Comparison Options</legend>
-          <div class="form-box">
-            <label for="comparisonType" class="optional-label">Comparison Type</label>
-            <select id="comparisonType" name="comparisonType">
-              <option value="exact">Exact Match</option>
-              <option value="subset">Subset Match</option>
-              <option value="variable">Variable-based Comparison</option>
-              <option value="custom">Custom Comparison</option>
-              <option value="multi">Multiple Return Values</option>
-              <option value="object">Object/Dictionary Comparison</option>
-            </select>
-          </div>
-          <div class="form-box hidden" id="variableNameGroup">
-            <label for="variableName" class="optional-label">Variable Name to Compare</label>
-            <input id="variableName" name="variableName" type="text" placeholder="e.g., result">
-          </div>
-          <div class="form-box hidden" id="customCompareGroup">
-            <label for="customCompare" class="optional-label">Custom Comparison Function</label>
-            <textarea id="customCompare" name="customCompare" rows="3" placeholder="(output, expected) => JSON.stringify(output) === JSON.stringify(expected)"></textarea>
-          </div>
-          <div class="form-box hidden" id="multiReturnGroup">
-            <label for="returnIndices" class="optional-label">Return Value Indices to Compare</label>
-            <input id="returnIndices" name="returnIndices" type="text" placeholder="e.g., 0,1 or leave empty for all">
-          </div>
-        </fieldset>
-        <div class="control-buttons">
-          <button type="submit">Preview Problem</button>
-          <button type="button" id="saveQuestion">Save Question</button>
-          <button type="reset" id="resetForm">Reset Form</button>
-        </div>
-      </form>
-      <section class="advanced-template-section">
-        <div class="advanced-header">
-          <h3>Advanced: Full Execution Template</h3>
-          <span class="sync-status">Template sync active</span>
-        </div>
-        <div class="advanced-content">
-          <textarea id="fullTemplateEditor" class="template-editor"></textarea>
-          <div class="template-controls">
-            <button type="button" id="restoreTemplate">Restore Default Template</button>
-            <button type="button" id="updateTemplate">Update Template</button>
-          </div>
-          <p class="template-note">The code below shows the exact code that will be executed (with your solution replaced by the marker: /* USER SOLUTION HERE */).</p>
-        </div>
-      </section>
-    </section>
-    <section id="resultSection" class="hidden">
-      <div id="generatedContent" class="generated-content"></div>
-      <div class="nav-buttons">
-        <button id="prevBtn" class="secondary">Previous Question</button>
-        <button id="nextBtn" class="secondary">Next Question</button>
-        <button id="editBtn">Edit Problem</button>
-        <button id="revealTestBtn">Reveal Test Cases</button>
-      </div>
-    </section>
-  </main>
+  <div class="container">
+    <div class="logo">
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <g class="code-brackets">
+          <path d="M60,40 L30,100 L60,160" stroke="#00ff00" stroke-width="8" fill="none"/>
+          <path d="M140,40 L170,100 L140,160" stroke="#00ff00" stroke-width="8" fill="none"/>
+        </g>
+      </svg>
+    </div>
+    <h1>CodePit</h1>
+    <p>Something awesome is brewing...</p>
+  </div>
 </body>
 </html>
